@@ -1,0 +1,37 @@
+-- Purpose: allow folioone_runtime to resolve and call auth.uid().
+-- Prerequisites: folioone_runtime exists; auth schema exists; the SQL Editor
+-- execution role has grant authority on auth. If GRANT is denied, stop and
+-- arrange an approved owner/grant-option path; do not change schema ownership.
+-- Execution order: Milestone 2A privilege follow-up, item 1.
+-- Repeatability: GRANT is idempotent; safe to execute more than once.
+-- Expected outcome: runtime has USAGE (not CREATE) on auth. It receives no
+-- access to auth tables. Existing auth.uid() EXECUTE is already available.
+
+-- Preflight (run separately as the intended SQL Editor role; must be true):
+SELECT has_schema_privilege(current_user, 'auth', 'USAGE WITH GRANT OPTION')
+  AS can_grant_auth_usage;
+
+-- If the preflight is false, do not run the grant below. Request an approved
+-- Supabase owner/grant-option execution path instead.
+
+BEGIN;
+
+GRANT USAGE ON SCHEMA auth TO folioone_runtime;
+
+COMMIT;
+
+-- Post-execution verification (read-only):
+SELECT has_schema_privilege('folioone_runtime', 'auth', 'USAGE') AS runtime_auth_usage,
+       has_schema_privilege('folioone_runtime', 'auth', 'CREATE') AS runtime_auth_create,
+       has_function_privilege('folioone_runtime', 'auth.uid()', 'EXECUTE') AS runtime_auth_uid_execute;
+
+-- Expected: true, false, true.
+
+-- Rollback (only if restoring the previously inspected state is intended):
+-- REVOKE USAGE ON SCHEMA auth FROM folioone_runtime;
+-- This prevents runtime from resolving auth.uid(); it does not change function ACLs.
+-- RETIRED — DO NOT EXECUTE.
+-- The folioone_runtime role was permanently removed. This file is retained
+-- only as historical audit material; current runtime uses authenticated
+-- Supabase PostgREST requests and no custom PostgreSQL login.
+

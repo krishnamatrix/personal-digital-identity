@@ -1,0 +1,93 @@
+-- Purpose: define future application-object ACLs for objects created as
+-- folioone_migrator in public, and prevent PUBLIC EXECUTE by default on
+-- future routines created by folioone_migrator.
+-- Prerequisites: both Folioone roles exist; folioone_migrator has CREATE on
+-- public; the SQL Editor session is postgres and the recorded ADMIN membership
+-- allows it to temporarily enable SET on its existing ADMIN membership in
+-- folioone_migrator.
+-- Execution order: after 001. Execute the whole file as one transaction.
+-- Repeatability: the default ACL GRANT/REVOKE statements are idempotent. The
+-- Restore the administrator's ADMIN membership to SET=false before COMMIT.
+-- Expected outcome: future public tables get runtime CRUD, future public
+-- sequences get runtime USAGE, and future migrator-created routines do not
+-- receive default EXECUTE for PUBLIC. Existing objects are unaffected.
+-- Security note: the temporary SET option lets the SQL Editor's postgres
+-- session act as the migrator only within this transaction; ADMIN remains
+-- available but INHERIT and SET are false outside the transaction. If any statement
+-- errors, ROLLBACK the transaction; do not commit while SET remains enabled.
+
+-- Preflight (run separately; both results must be true):
+SELECT session_user = 'postgres' AS expected_sql_editor_login,
+       EXISTS (
+         SELECT 1 FROM pg_auth_members AS m
+         WHERE m.member = session_user::regrole
+           AND m.roleid = 'folioone_migrator'::regrole
+           AND m.admin_option
+       ) AS can_grant_temporary_set_option;
+
+-- If either preflight result is false, do not run the transaction below.
+
+BEGIN;
+
+GRANT folioone_migrator TO postgres
+  WITH ADMIN TRUE, INHERIT FALSE, SET TRUE;
+
+SET LOCAL ROLE folioone_migrator;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE folioone_migrator IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO folioone_runtime;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE folioone_migrator IN SCHEMA public
+  GRANT USAGE ON SEQUENCES TO folioone_runtime;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE folioone_migrator
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
+
+RESET ROLE;
+
+GRANT folioone_migrator TO postgres
+  WITH ADMIN TRUE, INHERIT FALSE, SET FALSE;
+
+COMMIT;
+
+-- Post-execution verification (read-only):
+SELECT d.defaclobjtype AS object_type,
+       COALESCE(n.nspname, '<global>') AS schema_name,
+       CASE WHEN acl.grantee = 0 THEN 'PUBLIC'
+            ELSE pg_get_userbyid(acl.grantee)
+       END AS grantee,
+       acl.privilege_type
+FROM pg_default_acl AS d
+LEFT JOIN pg_namespace AS n ON n.oid = d.defaclnamespace
+CROSS JOIN LATERAL aclexplode(d.defaclacl) AS acl
+WHERE d.defaclrole = 'folioone_migrator'::regrole
+  AND ((d.defaclobjtype IN ('r', 'S') AND n.nspname = 'public')
+       OR (d.defaclobjtype = 'f' AND d.defaclnamespace = 0))
+ORDER BY object_type, schema_name, grantee, acl.privilege_type;
+
+SELECT pg_has_role('postgres', 'folioone_migrator', 'SET') AS postgres_can_set_migrator,
+       (SELECT m.admin_option FROM pg_auth_members AS m
+        WHERE m.member = 'postgres'::regrole
+          AND m.roleid = 'folioone_migrator'::regrole) AS postgres_admin_option;
+
+-- Expected table ACL rows: folioone_runtime SELECT, INSERT, UPDATE, DELETE.
+-- Expected sequence ACL row: folioone_runtime USAGE.
+-- Expected global function ACL: no PUBLIC EXECUTE row.
+-- Expected: postgres_can_set_migrator=false and postgres_admin_option=true.
+
+-- Rollback (only if restoring the previously inspected default-ACL state):
+-- Run this in one transaction under an authorized session, using the same
+-- temporary SET-option wrapper above, then:
+-- ALTER DEFAULT PRIVILEGES FOR ROLE folioone_migrator IN SCHEMA public
+--   REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLES FROM folioone_runtime;
+-- ALTER DEFAULT PRIVILEGES FOR ROLE folioone_migrator IN SCHEMA public
+--   REVOKE USAGE ON SEQUENCES FROM folioone_runtime;
+-- ALTER DEFAULT PRIVILEGES FOR ROLE folioone_migrator
+--   GRANT EXECUTE ON FUNCTIONS TO PUBLIC;
+-- Reset role, restore membership options to ADMIN=true, INHERIT=false,
+-- SET=false, and commit.
+-- These rollback commands affect defaults for future objects only.
+-- RETIRED — DO NOT EXECUTE.
+-- folioone_migrator and folioone_runtime were permanently removed. The
+-- associated role/default-ACL design is obsolete and must not be restored.
+

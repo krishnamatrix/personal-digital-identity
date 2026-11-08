@@ -1,0 +1,26 @@
+-- Purpose: remove the temporary database CREATE grant from folioone_migrator
+-- after the stock Drizzle Kit migrate process has stopped.
+-- Prerequisites: 003 was executed; the migration process is no longer running.
+-- Execution order: immediately after the approved migration runner exits.
+-- Repeatability: REVOKE is idempotent. Safe to execute more than once.
+-- Expected outcome: folioone_migrator returns to database CREATE=false;
+-- folioone_runtime remains database CREATE=false throughout.
+
+REVOKE CREATE ON DATABASE postgres FROM folioone_migrator;
+
+-- Post-execution verification (read-only):
+SELECT has_database_privilege('folioone_migrator', 'postgres', 'CREATE')
+         AS migrator_database_create,
+       has_database_privilege('folioone_runtime', 'postgres', 'CREATE')
+         AS runtime_database_create;
+
+-- Expected: false, false.
+
+-- Rollback (only if the temporary privilege must be restored for an approved
+-- subsequent Drizzle Kit migrate run):
+-- GRANT CREATE ON DATABASE postgres TO folioone_migrator;
+-- Revoke it again using this file as soon as that run exits.
+-- RETIRED — DO NOT EXECUTE.
+-- This temporary database CREATE revoke paired with a grant to the removed
+-- folioone_migrator role. Retained only for audit history.
+

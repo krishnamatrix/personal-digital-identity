@@ -1,0 +1,105 @@
+-- Purpose: create the Supabase Auth-linked account and private canonical
+-- identity profile tables. This file is manually executed by the developer as
+-- postgres through Supabase SQL Editor; it does not create roles or credentials.
+-- Prerequisites: use the approved Folioone development project; session_user
+-- and current_user are postgres; auth.users exists; postgres has USAGE on auth,
+-- REFERENCES on auth.users, and CREATE on public; both application tables are
+-- absent. The read-only preflight checks these conditions.
+-- Execution order: first Identity and Access DDL file, before 002-identity-rls.sql.
+-- Repeatability: one-time only. Do not rerun if either table exists; inspect
+-- and reconcile actual state instead of relying on IF NOT EXISTS.
+-- Expected outcome: accounts and identity_profiles are owned by postgres,
+-- linked by the authenticated Supabase UUID, and RLS is enabled and forced.
+-- Runtime rows remain denied until the policies in file 002 are installed.
+
+-- Read-only preflight; every result must be true before continuing.
+SELECT current_database() = 'postgres' AS expected_database,
+       session_user = 'postgres' AS expected_session_role,
+       current_user = 'postgres' AS expected_execution_role,
+       has_schema_privilege(current_user, 'public', 'CREATE')
+         AS can_create_in_public,
+       has_schema_privilege(current_user, 'auth', 'USAGE')
+         AS can_resolve_auth,
+       has_table_privilege(current_user, 'auth.users', 'REFERENCES')
+         AS can_reference_auth_users,
+       to_regclass('auth.users') IS NOT NULL AS auth_users_present,
+       to_regclass('public.accounts') IS NULL AS accounts_absent,
+       to_regclass('public.identity_profiles') IS NULL AS profiles_absent;
+
+BEGIN;
+
+CREATE TABLE public.accounts (
+  id uuid PRIMARY KEY,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT accounts_id_auth_users_id_fk
+    FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE public.identity_profiles (
+  account_id uuid PRIMARY KEY,
+  display_name text,
+  headline text,
+  summary text,
+  location text,
+  website_url text,
+  linkedin_url text,
+  github_url text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT identity_profiles_account_id_accounts_id_fk
+    FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE CASCADE,
+  CONSTRAINT identity_profiles_display_name_length_check
+    CHECK (display_name IS NULL OR char_length(display_name) <= 120),
+  CONSTRAINT identity_profiles_headline_length_check
+    CHECK (headline IS NULL OR char_length(headline) <= 180),
+  CONSTRAINT identity_profiles_summary_length_check
+    CHECK (summary IS NULL OR char_length(summary) <= 2000),
+  CONSTRAINT identity_profiles_location_length_check
+    CHECK (location IS NULL OR char_length(location) <= 160),
+  CONSTRAINT identity_profiles_website_url_scheme_check
+    CHECK (website_url IS NULL OR website_url ~ '^https?://'),
+  CONSTRAINT identity_profiles_linkedin_url_scheme_check
+    CHECK (linkedin_url IS NULL OR linkedin_url ~ '^https?://'),
+  CONSTRAINT identity_profiles_github_url_scheme_check
+    CHECK (github_url IS NULL OR github_url ~ '^https?://')
+);
+
+-- Fail closed between table creation and policy installation. postgres has
+-- BYPASSRLS, so this does not constrain the administrator's own SQL Editor
+-- session; user-facing application requests never use that connection.
+ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.accounts FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.identity_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.identity_profiles FORCE ROW LEVEL SECURITY;
+
+COMMIT;
+
+-- Post-execution verification SQL (read-only):
+SELECT c.relname AS table_name,
+       pg_get_userbyid(c.relowner) AS owner,
+       c.relrowsecurity AS rls_enabled,
+       c.relforcerowsecurity AS rls_forced
+FROM pg_class AS c
+JOIN pg_namespace AS n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public'
+  AND c.relname IN ('accounts', 'identity_profiles')
+ORDER BY c.relname;
+
+SELECT conrelid::regclass AS table_name, conname, pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE conrelid IN ('public.accounts'::regclass,
+                   'public.identity_profiles'::regclass)
+ORDER BY conrelid::regclass::text, conname;
+
+-- Expected: both tables are owned by postgres, RLS is enabled and forced,
+-- all named FK/check constraints are present. postgres may bypass RLS despite
+-- FORCE ROW LEVEL SECURITY; this is only catalog verification, not an RLS test.
+
+-- Rollback limitations: dropping these tables deletes all account/profile data.
+-- Only use before data exists and with developer approval. Policies and grants
+-- installed by file 002 must be removed first.
+-- BEGIN;
+-- DROP TABLE public.identity_profiles;
+-- DROP TABLE public.accounts;
+-- COMMIT;

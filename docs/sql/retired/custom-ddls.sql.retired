@@ -1,0 +1,67 @@
+BEGIN;
+
+-- Application runtime login
+CREATE ROLE folioone_runtime
+  WITH LOGIN
+  NOSUPERUSER
+  NOCREATEDB
+  NOCREATEROLE
+  NOINHERIT
+  NOREPLICATION
+  NOBYPASSRLS;
+
+-- Migration-only login
+CREATE ROLE folioone_migrator
+  WITH LOGIN
+  NOSUPERUSER
+  NOCREATEDB
+  NOCREATEROLE
+  NOINHERIT
+  NOREPLICATION
+  NOBYPASSRLS;
+
+-- Database connectivity
+GRANT CONNECT ON DATABASE postgres
+  TO folioone_runtime, folioone_migrator;
+
+-- Runtime schema access
+GRANT USAGE ON SCHEMA public TO folioone_runtime;
+GRANT USAGE ON SCHEMA auth TO folioone_runtime;
+
+-- Migrator schema access
+GRANT USAGE, CREATE ON SCHEMA public
+  TO folioone_migrator;
+
+-- Drizzle metadata schema.
+-- Postgres owns the schema; migrator creates its objects inside it.
+CREATE SCHEMA drizzle AUTHORIZATION postgres;
+
+GRANT USAGE, CREATE ON SCHEMA drizzle
+  TO folioone_migrator;
+
+COMMIT;
+
+
+ALTER ROLE folioone_runtime
+-- RETIRED CONTENT REDACTED: credential-bearing/configuration line omitted.
+
+ALTER ROLE folioone_migrator
+-- RETIRED CONTENT REDACTED: credential-bearing/configuration line omitted.
+
+-- Future application tables
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE
+  ON TABLES TO folioone_runtime;
+
+-- Future application sequences
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT USAGE ON SEQUENCES TO folioone_runtime;
+
+-- Future functions created by the migrator
+ALTER DEFAULT PRIVILEGES
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
+-- RETIRED — DO NOT EXECUTE.
+-- Historical aggregate role provisioning. The custom Folioone PostgreSQL
+-- RETIRED CONTENT REDACTED: credential-bearing/configuration line omitted.
+-- or credential-bearing lines must be omitted from archived material.
+

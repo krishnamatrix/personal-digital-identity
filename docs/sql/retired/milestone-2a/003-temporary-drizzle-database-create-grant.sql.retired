@@ -1,0 +1,31 @@
+-- Purpose: temporarily satisfy the stock Drizzle PostgreSQL migrator's
+-- database CREATE check for its unconditional CREATE SCHEMA IF NOT EXISTS.
+-- Prerequisites: roles and postgres-owned drizzle schema are already present;
+-- folioone_migrator has USAGE, CREATE on drizzle and CREATE on public; the
+-- approved migration execution path is the stock Drizzle Kit runner; the
+-- SQL Editor session is an authorized database owner/admin. This privilege is
+-- not needed when the owner manually executes DDL that does not issue CREATE
+-- SCHEMA. Never grant it to folioone_runtime.
+-- Execution order: execute immediately before the approved Drizzle Kit
+-- migrate run; then execute 004 immediately after the runner exits.
+-- Repeatability: GRANT is idempotent. Do not leave this privilege in place.
+-- Expected outcome: folioone_migrator temporarily has database CREATE so the
+-- stock runner can execute CREATE SCHEMA IF NOT EXISTS drizzle. This does not
+-- grant CREATEDB or alter schema/object ownership.
+
+GRANT CREATE ON DATABASE postgres TO folioone_migrator;
+
+-- Post-execution verification (read-only):
+SELECT has_database_privilege('folioone_migrator', 'postgres', 'CREATE')
+  AS migrator_database_create;
+
+-- Expected: true. Proceed only with the intended migration operation, then
+-- execute 004. Do not use the runtime connection for migrations.
+
+-- Rollback if no migration operation was started:
+-- REVOKE CREATE ON DATABASE postgres FROM folioone_migrator;
+-- If a migration ran, this privilege revoke is cleanup, not a schema rollback.
+-- RETIRED — DO NOT EXECUTE.
+-- This temporary database CREATE grant existed only for the removed
+-- folioone_migrator role. DDL is now manually authored for postgres execution.
+

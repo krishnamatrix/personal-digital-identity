@@ -1,0 +1,4 @@
+-- RETIRED — DO NOT EXECUTE.
+-- Historical role provisioning was moved to docs/sql/retired/custom-ddls.sql.retired.
+-- Folioone custom PostgreSQL roles were permanently removed. Current DDL must
+-- be authored in numbered milestone files for manual execution as postgres.
