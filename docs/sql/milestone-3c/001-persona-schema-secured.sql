@@ -1,0 +1,345 @@
+-- M3C-PERSONA-001 — Persona tables, created already locked down.
+--
+-- STATUS: PROPOSAL. Not executed. Not approved for execution. Supersedes
+-- milestone-3a files 001-003 (see README.md in this directory). Do not run
+-- milestone-3a/001-003 and this file together.
+--
+-- Purpose and scope
+--   Create the five private Persona tables (personas, persona_sections,
+--   persona_profile_field_selections, persona_profile_overrides,
+--   persona_revisions) and, IN THE SAME TRANSACTION, enable and force row level
+--   security and revoke every privilege from PUBLIC, anon, authenticated and
+--   service_role. The tables are therefore never committed in a state where a
+--   client role could read or write them: there is no exposure window between
+--   creation and hardening. Policies, grants and functions follow in 002 and 003;
+--   until they are installed the tables are inaccessible to every API role.
+--
+-- Differences from milestone-3a 001-003 (each is a proposed resolution that
+-- needs approval; see docs/architecture/milestone-3c-persona-persistence.md):
+--   P-1  RLS and privilege revocation are part of table creation (closes H-1).
+--   P-2  persona_profile_field_selections no longer references
+--        identity_profiles(account_id). A selection row names an allowlisted
+--        field KEY, not a profile row, and ownership is already enforced by the
+--        composite foreign key to personas(id, account_id). Keeping the foreign
+--        key would make Persona creation fail for any account whose profile row
+--        does not exist yet, and would force Persona code to create Master
+--        Identity rows.
+--   P-3  Preconditions are enforced (the script aborts) instead of only
+--        displayed, and the outcome is asserted before COMMIT.
+--
+-- Preconditions (enforced by the DO block below; any failure aborts the whole
+-- transaction and nothing is created)
+--   - Run in the Supabase SQL Editor as postgres, in the DEVELOPMENT project.
+--   - public.accounts (Milestone 2) exists.
+--   - Roles anon, authenticated, service_role exist; authenticated has USAGE
+--     on schema public.
+--   - None of the five Persona tables exists.
+--   - No function named persona_* or zz_diag_m3a_* exists in schema public.
+--
+-- Execution order: 1 of 3 (then 002, then 003). Run all three in one session.
+-- Repeatability: ONE-TIME. A second run aborts in the precondition block.
+--   The script is a single transaction, so a failure leaves nothing behind.
+-- Expected outcome: five postgres-owned tables, RLS enabled and forced, no
+--   privileges for any role except the owner, no policies (default deny).
+--   Verification: verify-catalog.sql, section 1.
+-- Rollback / recovery: see rollback.sql. Safe only before Persona data exists.
+
+BEGIN;
+
+DO $preflight$
+BEGIN
+  IF session_user <> 'postgres' OR current_user <> 'postgres' THEN
+    RAISE EXCEPTION 'Run as postgres in the SQL Editor (session_user=%, current_user=%)',
+      session_user, current_user;
+  END IF;
+  IF to_regclass('public.accounts') IS NULL THEN
+    RAISE EXCEPTION 'public.accounts (Milestone 2) is required';
+  END IF;
+  IF (SELECT count(*) FROM pg_roles
+      WHERE rolname IN ('anon', 'authenticated', 'service_role')) <> 3 THEN
+    RAISE EXCEPTION 'Supabase roles anon, authenticated and service_role must exist';
+  END IF;
+  IF NOT has_schema_privilege('authenticated', 'public', 'USAGE') THEN
+    RAISE EXCEPTION 'authenticated must have USAGE on schema public';
+  END IF;
+  IF to_regclass('public.personas') IS NOT NULL
+     OR to_regclass('public.persona_sections') IS NOT NULL
+     OR to_regclass('public.persona_profile_field_selections') IS NOT NULL
+     OR to_regclass('public.persona_profile_overrides') IS NOT NULL
+     OR to_regclass('public.persona_revisions') IS NOT NULL THEN
+    RAISE EXCEPTION 'A Persona table already exists. This file is one-time; stop and review.';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_proc AS p JOIN pg_namespace AS n ON n.oid = p.pronamespace
+             WHERE n.nspname = 'public'
+               AND (p.proname LIKE 'persona\_%' OR p.proname LIKE 'zz\_diag\_m3a\_%')) THEN
+    RAISE EXCEPTION 'persona_* or zz_diag_m3a_* functions already exist in schema public';
+  END IF;
+END;
+$preflight$;
+
+-- ---------------------------------------------------------------------------
+-- personas
+-- ---------------------------------------------------------------------------
+CREATE TABLE public.personas (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id uuid NOT NULL,
+  name text NOT NULL,
+  slug text,
+  description text,
+  audience text,
+  purpose text,
+  visibility text NOT NULL DEFAULT 'private',
+  status text NOT NULL DEFAULT 'active',
+  is_default boolean NOT NULL DEFAULT false,
+  position integer NOT NULL DEFAULT 0,
+  version integer NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  archived_at timestamptz,
+  CONSTRAINT personas_account_id_accounts_id_fk
+    FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE CASCADE,
+  CONSTRAINT personas_id_account_id_unique UNIQUE (id, account_id),
+  CONSTRAINT personas_name_length_check
+    CHECK (char_length(btrim(name)) BETWEEN 1 AND 100),
+  CONSTRAINT personas_name_trimmed_check CHECK (name = btrim(name)),
+  CONSTRAINT personas_description_length_check
+    CHECK (description IS NULL OR char_length(description) <= 500),
+  CONSTRAINT personas_audience_length_check
+    CHECK (audience IS NULL OR char_length(audience) <= 200),
+  CONSTRAINT personas_purpose_length_check
+    CHECK (purpose IS NULL OR char_length(purpose) <= 200),
+  CONSTRAINT personas_slug_format_check
+    CHECK (slug IS NULL OR (char_length(slug) <= 80
+      AND slug ~ '^[a-z0-9]+([_-][a-z0-9]+)*$')),
+  CONSTRAINT personas_status_check
+    CHECK (status IN ('active', 'archived')),
+  CONSTRAINT personas_private_visibility_check CHECK (visibility = 'private'),
+  CONSTRAINT personas_archive_state_check
+    CHECK ((status = 'active' AND archived_at IS NULL)
+        OR (status = 'archived' AND archived_at IS NOT NULL)),
+  CONSTRAINT personas_archived_not_default_check
+    CHECK (status = 'active' OR NOT is_default),
+  CONSTRAINT personas_position_nonnegative_check CHECK (position >= 0),
+  CONSTRAINT personas_version_positive_check CHECK (version > 0)
+);
+CREATE UNIQUE INDEX personas_account_active_name_unique
+  ON public.personas (account_id, lower(name)) WHERE status = 'active';
+CREATE UNIQUE INDEX personas_account_slug_unique
+  ON public.personas (account_id, slug) WHERE slug IS NOT NULL;
+CREATE UNIQUE INDEX personas_one_active_default_per_account
+  ON public.personas (account_id) WHERE is_default AND status = 'active';
+CREATE INDEX personas_account_status_position_idx
+  ON public.personas (account_id, status, position, id);
+
+-- ---------------------------------------------------------------------------
+-- persona_sections
+-- ---------------------------------------------------------------------------
+CREATE TABLE public.persona_sections (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  persona_id uuid NOT NULL,
+  account_id uuid NOT NULL,
+  section_key text NOT NULL,
+  label_override text,
+  is_visible boolean NOT NULL DEFAULT true,
+  position integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT persona_sections_persona_owner_fk
+    FOREIGN KEY (persona_id, account_id)
+    REFERENCES public.personas(id, account_id) ON DELETE CASCADE,
+  CONSTRAINT persona_sections_persona_key_unique UNIQUE (persona_id, section_key),
+  -- Deferrable so one statement can renumber/swap; the reorder RPC validates
+  -- with SET CONSTRAINTS ... IMMEDIATE. A deferrable constraint cannot be an
+  -- ON CONFLICT arbiter, so no function uses ON CONFLICT on it.
+  CONSTRAINT persona_sections_persona_position_unique
+    UNIQUE (persona_id, position) DEFERRABLE INITIALLY DEFERRED,
+  CONSTRAINT persona_sections_key_nonempty_check
+    CHECK (char_length(btrim(section_key)) BETWEEN 1 AND 80),
+  CONSTRAINT persona_sections_label_length_check
+    CHECK (label_override IS NULL OR char_length(label_override) <= 100),
+  CONSTRAINT persona_sections_position_nonnegative_check CHECK (position >= 0)
+);
+CREATE INDEX persona_sections_owner_persona_idx
+  ON public.persona_sections (account_id, persona_id);
+
+-- ---------------------------------------------------------------------------
+-- persona_profile_field_selections  (P-2: no foreign key to identity_profiles)
+-- ---------------------------------------------------------------------------
+CREATE TABLE public.persona_profile_field_selections (
+  persona_id uuid NOT NULL,
+  account_id uuid NOT NULL,
+  field_key text NOT NULL,
+  is_included boolean NOT NULL DEFAULT false,
+  position integer NOT NULL DEFAULT 0,
+  is_highlighted boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT persona_profile_field_selections_pk PRIMARY KEY (persona_id, field_key),
+  CONSTRAINT persona_profile_field_selections_persona_owner_fk
+    FOREIGN KEY (persona_id, account_id)
+    REFERENCES public.personas(id, account_id) ON DELETE CASCADE,
+  CONSTRAINT persona_profile_field_selections_field_key_check
+    CHECK (field_key IN ('display_name', 'headline', 'summary', 'location',
+                         'website_url', 'linkedin_url', 'github_url')),
+  CONSTRAINT persona_profile_field_selections_position_check CHECK (position >= 0),
+  CONSTRAINT persona_profile_field_selections_highlight_check
+    CHECK (NOT is_highlighted OR is_included)
+);
+CREATE INDEX persona_profile_field_selections_owner_idx
+  ON public.persona_profile_field_selections
+     (account_id, persona_id, is_included, position);
+
+-- ---------------------------------------------------------------------------
+-- persona_profile_overrides  (row presence = override; NULL value = intentional blank)
+-- ---------------------------------------------------------------------------
+CREATE TABLE public.persona_profile_overrides (
+  persona_id uuid NOT NULL,
+  account_id uuid NOT NULL,
+  field_key text NOT NULL,
+  override_value text,
+  override_version integer NOT NULL DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT persona_profile_overrides_pk PRIMARY KEY (persona_id, field_key),
+  CONSTRAINT persona_profile_overrides_persona_owner_fk
+    FOREIGN KEY (persona_id, account_id)
+    REFERENCES public.personas(id, account_id) ON DELETE CASCADE,
+  CONSTRAINT persona_profile_overrides_field_key_check
+    CHECK (field_key IN ('display_name', 'headline', 'summary', 'location',
+                         'website_url', 'linkedin_url', 'github_url')),
+  CONSTRAINT persona_profile_overrides_version_check CHECK (override_version > 0),
+  CONSTRAINT persona_profile_overrides_value_length_check
+    CHECK ((field_key <> 'display_name' OR override_value IS NULL OR char_length(override_value) <= 120)
+       AND (field_key <> 'headline' OR override_value IS NULL OR char_length(override_value) <= 180)
+       AND (field_key <> 'summary' OR override_value IS NULL OR char_length(override_value) <= 2000)
+       AND (field_key <> 'location' OR override_value IS NULL OR char_length(override_value) <= 160)
+       AND (field_key NOT IN ('website_url', 'linkedin_url', 'github_url')
+            OR override_value IS NULL
+            OR (char_length(override_value) <= 2048 AND override_value ~ '^https?://')))
+);
+CREATE INDEX persona_profile_overrides_owner_idx
+  ON public.persona_profile_overrides (account_id, persona_id);
+
+-- ---------------------------------------------------------------------------
+-- persona_revisions  (append-only for API roles; purged with the Persona by
+-- ON DELETE CASCADE, which runs as the table owner)
+-- ---------------------------------------------------------------------------
+CREATE TABLE public.persona_revisions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  persona_id uuid NOT NULL,
+  account_id uuid NOT NULL,
+  actor_id uuid NOT NULL,
+  revision_number bigint NOT NULL,
+  event_type text NOT NULL,
+  configuration_payload jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT persona_revisions_persona_owner_fk
+    FOREIGN KEY (persona_id, account_id)
+    REFERENCES public.personas(id, account_id) ON DELETE CASCADE,
+  CONSTRAINT persona_revisions_actor_owner_check CHECK (actor_id = account_id),
+  CONSTRAINT persona_revisions_number_positive_check CHECK (revision_number > 0),
+  CONSTRAINT persona_revisions_event_type_check
+    CHECK (event_type IN ('created', 'updated', 'duplicated', 'archived',
+                          'restored', 'default_changed', 'deleted')),
+  CONSTRAINT persona_revisions_payload_object_check
+    CHECK (jsonb_typeof(configuration_payload) = 'object'),
+  CONSTRAINT persona_revisions_persona_number_unique
+    UNIQUE (persona_id, revision_number)
+);
+CREATE INDEX persona_revisions_owner_history_idx
+  ON public.persona_revisions (account_id, persona_id, created_at DESC);
+
+-- ---------------------------------------------------------------------------
+-- Lock down IMMEDIATELY, in the same transaction (P-1)
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.personas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.personas FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.persona_sections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.persona_sections FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.persona_profile_field_selections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.persona_profile_field_selections FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.persona_profile_overrides ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.persona_profile_overrides FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.persona_revisions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.persona_revisions FORCE ROW LEVEL SECURITY;
+
+-- Supabase default privileges grant new public tables to API roles. Remove every
+-- non-owner grant, whichever role holds it, then name the API roles explicitly.
+DO $revoke$
+DECLARE
+  grant_entry record;
+BEGIN
+  FOR grant_entry IN
+    SELECT c.oid::regclass AS relation_name,
+           CASE WHEN acl.grantee = 0 THEN 'PUBLIC'
+                ELSE pg_get_userbyid(acl.grantee) END AS grantee_name
+    FROM pg_class AS c
+    JOIN pg_namespace AS n ON n.oid = c.relnamespace
+    CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl, acldefault('r', c.relowner))) AS acl
+    WHERE n.nspname = 'public'
+      AND c.relname IN ('personas', 'persona_sections',
+        'persona_profile_field_selections', 'persona_profile_overrides',
+        'persona_revisions')
+      AND acl.grantee <> c.relowner
+  LOOP
+    IF grant_entry.grantee_name = 'PUBLIC' THEN
+      EXECUTE format('REVOKE ALL PRIVILEGES ON TABLE %s FROM PUBLIC', grant_entry.relation_name);
+    ELSE
+      EXECUTE format('REVOKE ALL PRIVILEGES ON TABLE %s FROM %I',
+        grant_entry.relation_name, grant_entry.grantee_name);
+    END IF;
+  END LOOP;
+END;
+$revoke$;
+
+REVOKE ALL PRIVILEGES ON TABLE public.personas, public.persona_sections,
+  public.persona_profile_field_selections, public.persona_profile_overrides,
+  public.persona_revisions FROM PUBLIC, anon, authenticated, service_role;
+
+-- ---------------------------------------------------------------------------
+-- Assert the outcome before committing: any failure rolls everything back.
+-- ---------------------------------------------------------------------------
+DO $assert$
+DECLARE
+  bad text;
+BEGIN
+  SELECT string_agg(c.relname, ', ') INTO bad
+  FROM pg_class AS c JOIN pg_namespace AS n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public'
+    AND c.relname IN ('personas', 'persona_sections',
+      'persona_profile_field_selections', 'persona_profile_overrides',
+      'persona_revisions')
+    AND NOT (c.relrowsecurity AND c.relforcerowsecurity);
+  IF bad IS NOT NULL THEN
+    RAISE EXCEPTION 'RLS is not both enabled and forced on: %', bad;
+  END IF;
+
+  SELECT string_agg(c.relname || ' -> ' ||
+           CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END, ', ')
+    INTO bad
+  FROM pg_class AS c JOIN pg_namespace AS n ON n.oid = c.relnamespace
+  CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl, acldefault('r', c.relowner))) AS a
+  WHERE n.nspname = 'public'
+    AND c.relname IN ('personas', 'persona_sections',
+      'persona_profile_field_selections', 'persona_profile_overrides',
+      'persona_revisions')
+    AND a.grantee <> c.relowner;
+  IF bad IS NOT NULL THEN
+    RAISE EXCEPTION 'Unexpected table privileges remain: %', bad;
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+             AND tablename IN ('personas', 'persona_sections',
+               'persona_profile_field_selections', 'persona_profile_overrides',
+               'persona_revisions')) THEN
+    RAISE EXCEPTION 'No policy may exist after 001 (default deny until 002)';
+  END IF;
+END;
+$assert$;
+
+COMMIT;
+
+-- Post-execution verification: run verify-catalog.sql (read-only), section 1.
+-- Expected: five postgres-owned tables, rls_enabled and rls_forced true,
+-- zero non-owner privileges, zero policies. Runtime isolation is NOT shown by a
+-- catalog check; it requires the hosted two-user tests in tests/hosted/.

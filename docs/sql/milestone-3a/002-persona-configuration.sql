@@ -4,7 +4,8 @@
 -- Prerequisites: 001-persona-tables.sql manually executed and independently
 -- verified; public.accounts and public.identity_profiles exist; inspect existing
 -- target objects and ACLs. Run as developer-controlled postgres only after review.
--- Execution order: 2 of 4 Milestone 3A SQL files.
+-- Execution order: 2 of 5 Milestone 3A SQL files.
+-- Revision R1: position uniqueness made DEFERRABLE INITIALLY DEFERRED.
 -- Repeatability: one-time; stop if any target relation or constraint already
 -- exists. Do not use IF NOT EXISTS to mask a partial deployment.
 -- Expected outcome: selected fields and layout belong to one Persona/account;
@@ -26,7 +27,13 @@ CREATE TABLE public.persona_sections (
     FOREIGN KEY (persona_id, account_id)
     REFERENCES public.personas(id, account_id) ON DELETE CASCADE,
   CONSTRAINT persona_sections_persona_key_unique UNIQUE (persona_id, section_key),
-  CONSTRAINT persona_sections_persona_position_unique UNIQUE (persona_id, position),
+  -- DEFERRABLE INITIALLY DEFERRED so one statement (or one RPC transaction) can
+  -- swap or renumber positions; uniqueness is then checked at commit, or earlier
+  -- by SET CONSTRAINTS ... IMMEDIATE inside persona_reorder_sections (file 005).
+  -- A deferrable unique constraint cannot be an ON CONFLICT arbiter; the
+  -- mutation RPCs therefore use persona_sections_persona_key_unique for upserts.
+  CONSTRAINT persona_sections_persona_position_unique
+    UNIQUE (persona_id, position) DEFERRABLE INITIALLY DEFERRED,
   CONSTRAINT persona_sections_key_nonempty_check
     CHECK (char_length(btrim(section_key)) BETWEEN 1 AND 80),
   CONSTRAINT persona_sections_label_length_check

@@ -9,6 +9,10 @@ const environmentSchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.string().min(1).optional(),
   ),
+  // Persona storage backend. "fixture" (default) keeps Personas in server memory;
+  // "supabase" uses the PostgREST/RPC repository and requires the M3C SQL to be
+  // approved, executed and verified first. Server-side only: no NEXT_PUBLIC_ prefix.
+  PERSONA_STORAGE: z.enum(["fixture", "supabase"]).default("fixture"),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),

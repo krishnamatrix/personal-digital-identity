@@ -137,4 +137,4 @@ Use Vitest for domain services, schemas, and projection/privacy rules, and Playw
 
 ## Recommended Next Task
 
-Persona Management is in Milestone 3A design review. Do not begin Milestone 3B implementation until the design and its pending SQL proposals receive explicit approval.
+Milestone 3B (Persona screens and application layer) is approved for application implementation only, backed by an in-memory fixture adapter. The Persona SQL proposals remain unexecuted and unapproved for execution; live Persona persistence is not implemented. See [milestone-3b-persona-application.md](milestone-3b-persona-application.md).

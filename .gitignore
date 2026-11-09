@@ -12,3 +12,8 @@ next-env.d.ts
 .env.local
 .pnpm-store/
 .DS_Store
+graphify-out/
+
+.validate/
+playwright-report/
+test-results/

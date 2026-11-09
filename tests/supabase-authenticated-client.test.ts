@@ -49,7 +49,10 @@ describe("authenticated Supabase server client", () => {
     expect(mocks.createServerClient).toHaveBeenCalledWith(
       "https://project.supabase.co",
       "test-publishable-key",
-      expect.objectContaining({ cookies: expect.any(Object) }),
+      expect.objectContaining({
+        cookies: expect.any(Object),
+        db: { schema: "folioone" },
+      }),
     );
   });
 

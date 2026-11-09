@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { folioneDbOptions } from "@/lib/db-schema";
 import { requireSupabaseConfig } from "@/lib/env";
 
 export class AuthenticationRequiredError extends Error {
@@ -21,6 +22,7 @@ export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(url, anonKey, {
+    db: folioneDbOptions,
     cookies: {
       getAll() {
         return cookieStore.getAll();

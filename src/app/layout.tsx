@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "Folioone — Your identity, thoughtfully composed",
+  title: {
+    default: "Folioone — Your identity, thoughtfully composed",
+    template: "%s — Folioone",
+  },
   description: "A considered workspace for your professional identity.",
 };
 

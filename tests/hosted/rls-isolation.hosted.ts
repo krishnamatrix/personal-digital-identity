@@ -1,10 +1,7 @@
 import { loadEnvConfig } from "@next/env";
-import {
-  createClient,
-  type SupabaseClient,
-  type User,
-} from "@supabase/supabase-js";
+import { createClient, type User } from "@supabase/supabase-js";
 import { afterAll, describe, expect, it, type TestContext } from "vitest";
+import { folioneDbOptions, type FolioneClient } from "../../src/lib/db-schema";
 
 const ORIGINAL_ENVIRONMENT = { ...process.env };
 const mutableEnvironment = process.env as Record<string, string | undefined>;
@@ -62,7 +59,7 @@ type ProfileRow = {
 type AccountRow = { id: string; created_at: string; updated_at: string };
 type UserSession = {
   alias: "User A" | "User B";
-  client: SupabaseClient;
+  client: FolioneClient;
   user: User;
   account: AccountRow;
   profile: ProfileRow;
@@ -232,6 +229,7 @@ describe("Hosted Supabase two-user RLS isolation", () => {
   it("denies anonymous reads and writes to private identity records", async (context) => {
     const { a, b } = await sessions(context);
     const anonymous = createClient(projectUrl!, anonKey!, {
+      db: folioneDbOptions,
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -350,8 +348,9 @@ async function createHostedSessions(): Promise<HostedSessions> {
   return { a, b };
 }
 
-function createUserClient(alias: "user-a" | "user-b"): SupabaseClient {
+function createUserClient(alias: "user-a" | "user-b"): FolioneClient {
   return createClient(projectUrl!, anonKey!, {
+    db: folioneDbOptions,
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -362,7 +361,7 @@ function createUserClient(alias: "user-a" | "user-b"): SupabaseClient {
 }
 
 async function signInAndVerify(
-  client: SupabaseClient,
+  client: FolioneClient,
   email: string,
   password: string,
   alias: "User A" | "User B",
@@ -396,7 +395,7 @@ async function signInAndVerify(
 }
 
 async function initializeOwnIdentity(
-  client: SupabaseClient,
+  client: FolioneClient,
   user: User,
   alias: "User A" | "User B",
 ): Promise<UserSession> {
@@ -452,7 +451,7 @@ async function initializeOwnIdentity(
 }
 
 async function readOwnAccount(
-  client: SupabaseClient,
+  client: FolioneClient,
   userId: string,
   alias: "User A" | "User B",
 ): Promise<AccountRow> {
@@ -470,7 +469,7 @@ async function readOwnAccount(
 }
 
 async function readOwnProfileMaybe(
-  client: SupabaseClient,
+  client: FolioneClient,
   userId: string,
   alias: "User A" | "User B",
 ): Promise<ProfileRow | null> {
@@ -486,7 +485,7 @@ async function readOwnProfileMaybe(
 }
 
 async function readOwnProfile(
-  client: SupabaseClient,
+  client: FolioneClient,
   userId: string,
   alias: "User A" | "User B",
 ): Promise<ProfileRow> {
@@ -496,7 +495,7 @@ async function readOwnProfile(
 }
 
 async function restoreProfileIfChanged(
-  client: SupabaseClient,
+  client: FolioneClient,
   userId: string,
   original: ProfileRow,
 ): Promise<void> {

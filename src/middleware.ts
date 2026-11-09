@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { folioneDbOptions } from "@/lib/db-schema";
 import { env } from "@/lib/env";
 
 export async function middleware(request: NextRequest) {
@@ -14,6 +15,7 @@ export async function middleware(request: NextRequest) {
 
   let response = NextResponse.next({ request });
   const supabase = createServerClient(url, anonKey, {
+    db: folioneDbOptions,
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -37,5 +39,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/profile/:path*"],
+  matcher: ["/profile/:path*", "/personas/:path*"],
 };

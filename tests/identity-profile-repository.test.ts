@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { FolioneClient } from "@/lib/db-schema";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   findProfile,
@@ -21,7 +21,7 @@ function makeQuery(data: unknown = null, error: unknown = null) {
   query.maybeSingle.mockResolvedValue({ data, error });
   const client = {
     from: vi.fn(() => query),
-  } as unknown as SupabaseClient;
+  } as unknown as FolioneClient;
   return { client, query };
 }
 

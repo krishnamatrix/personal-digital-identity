@@ -12,6 +12,9 @@ const styles = cva(
         outline: "border border-border bg-card hover:bg-muted",
         ghost: "hover:bg-muted",
         accent: "bg-accent text-white hover:bg-accent/90",
+        destructive: "bg-danger text-white hover:bg-danger/90",
+        "destructive-outline":
+          "border border-danger/40 bg-card text-danger hover:bg-danger-soft",
       },
       size: { default: "h-10 px-4", sm: "h-8 px-3 text-xs", icon: "h-9 w-9" },
     },

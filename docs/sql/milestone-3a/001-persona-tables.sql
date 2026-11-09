@@ -4,7 +4,7 @@
 -- Prerequisites: approved M3A design; M2 identity tables remain present and
 -- verified; public schema and authenticated role exist; inspect the exact ACLs
 -- and constraints before execution. No Persona table may already exist.
--- Execution order: 1 of 4 Milestone 3A SQL files.
+-- Execution order: 1 of 5 Milestone 3A SQL files.
 -- Repeatability: one-time and intentionally not rerunnable; stop on any existing
 -- target relation/index instead of hiding a partial or conflicting deployment.
 -- Expected outcome: private persona parent rows tied to public.accounts,

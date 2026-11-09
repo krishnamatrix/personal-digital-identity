@@ -1,6 +1,6 @@
 # Milestone 3A — Persona UX Specification
 
-**Status:** Design only. No routes or components are implemented.
+**Status:** Approved design and source of truth. Implemented in Milestone 3B against an in-memory fixture adapter (no live persistence); see [milestone-3b-persona-application.md](milestone-3b-persona-application.md).
 
 Use the existing approved workspace direction: warm ivory/off-white content, matte charcoal navigation, serif editorial headings, modern sans-serif body, subtle borders, restrained warm accents and generous whitespace. Keep the workspace functional and calm; avoid generic admin dashboards, purple gradients, neon and excessive glass effects.
 

@@ -1,0 +1,61 @@
+-- M3C — rollback and recovery guidance for 001-003.
+--
+-- STATUS: GUIDANCE ONLY. Nothing here runs by default: every statement is
+-- commented out. Use only with explicit developer approval, in the development
+-- project, as postgres. All of it is DESTRUCTIVE.
+--
+-- Choose the smallest recovery that fits.
+--
+-- A. A file failed part-way (001, 002 or 003):
+--    Nothing to do. Each file is one transaction with enforced preconditions and
+--    an asserted outcome; a failure rolls the whole file back. Fix the cause and
+--    run that file again (001-003 are one-time, so if a file ALREADY succeeded do
+--    not rerun it).
+--
+-- B. Take the write path away but keep the data (reversible, safest):
+--    Dropping the functions removes the only permitted write path. Direct writes
+--    remain blocked by the 002 policies and Persona data is untouched. Set
+--    PERSONA_STORAGE back to "fixture" in the application first.
+--      BEGIN;
+--      DROP FUNCTION public.persona_delete(uuid, integer);
+--      DROP FUNCTION public.persona_detail_json(uuid);
+--      DROP FUNCTION public.persona_duplicate(uuid, text);
+--      DROP FUNCTION public.persona_set_lifecycle(uuid, integer, text);
+--      DROP FUNCTION public.persona_set_default(uuid, integer, boolean);
+--      DROP FUNCTION public.persona_reorder_sections(uuid, integer, text[]);
+--      DROP FUNCTION public.persona_upsert_section(uuid, integer, text, text, boolean);
+--      DROP FUNCTION public.persona_apply_profile_field_changes(uuid, integer, jsonb);
+--      DROP FUNCTION public.persona_update_metadata(uuid, integer, text, text, text, text, text);
+--      DROP FUNCTION public.persona_create_with_configuration(text, text, text, text, jsonb, jsonb, jsonb, boolean);
+--      COMMIT;
+--
+-- C. Remove access entirely but keep the tables and data:
+--    Drop the policies and revoke authenticated's privileges. Never disable RLS.
+--      BEGIN;
+--      -- drop each of the 16 policies by name (see verify-catalog.sql section 2)
+--      REVOKE ALL PRIVILEGES ON TABLE public.personas, public.persona_sections,
+--        public.persona_profile_field_selections, public.persona_profile_overrides,
+--        public.persona_revisions FROM authenticated;
+--      DROP FUNCTION public.persona_write_rpc_context();
+--      COMMIT;
+--
+-- D. Remove the Persona tables (DESTROYS ALL PERSONA DATA AND REVISION HISTORY):
+--    Only before real data exists, or after exporting what must be kept.
+--    Do B and C first. Canonical Master Identity tables are not touched: nothing
+--    in 001-003 has a foreign key from Master Identity to a Persona.
+--      BEGIN;
+--      DROP TABLE public.persona_revisions;
+--      DROP TABLE public.persona_profile_overrides;
+--      DROP TABLE public.persona_profile_field_selections;
+--      DROP TABLE public.persona_sections;
+--      DROP TABLE public.personas;
+--      COMMIT;
+--
+-- Side effect to know about: persona_create_with_configuration may have inserted a
+-- row into public.accounts (the caller's own ownership anchor) for an account that
+-- had none. Rolling the Persona objects back does not remove it, and it must not
+-- be removed here: it is a Milestone 2 table, and the account row is also created
+-- by the profile flow. Leave it.
+--
+-- After any rollback, re-run verify-catalog.sql sections 1, 4 and 7, and confirm
+-- the application is on PERSONA_STORAGE=fixture.

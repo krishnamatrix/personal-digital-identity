@@ -9,9 +9,14 @@ never be used by application runtime or user-facing queries.
 ## File organization and execution
 
 - `milestone-2/` contains the manually deployed account/profile table and RLS SQL.
-- `milestone-3a/` contains proposed Persona foundation SQL only. These files
+- `milestone-3a/` contains proposed Persona foundation SQL only (001-005) and a
+  temporary `diagnostics/` set that must pass before 004/005 are approved. These files
   are pending architecture review and must not be executed until explicitly
   approved by the developer.
+- `milestone-3c/` contains the proposed Persona persistence SQL (001-003, plus
+  read-only `verify-catalog.sql` and commented-out `rollback.sql`). It supersedes
+  `milestone-3a/` 001-005 as a unit and is also unexecuted and unapproved; never run
+  both sets. See `docs/architecture/milestone-3c-persona-persistence.md`.
 - Numbered files state prerequisites and exact execution order in
   [execution-tracker.md](execution-tracker.md).
 - Keep object creation, grants, RLS, routines/triggers, and later schema

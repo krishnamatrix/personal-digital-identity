@@ -4,6 +4,8 @@ import type { ComponentProps } from "react";
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogTitle = DialogPrimitive.Title;
+export const DialogDescription = DialogPrimitive.Description;
+export const DialogClose = DialogPrimitive.Close;
 export function DialogContent({
   children,
   ...props
@@ -16,7 +18,10 @@ export function DialogContent({
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute top-4 right-4">
+        <DialogPrimitive.Close
+          aria-label="Close"
+          className="focus-visible:ring-accent absolute top-4 right-4 rounded focus-visible:ring-2 focus-visible:outline-none"
+        >
           <X className="size-4" />
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>

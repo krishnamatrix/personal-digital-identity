@@ -4,7 +4,7 @@
 src/app/                 Next.js App Router entry points and root layout
 src/components/ui/       shadcn-style shared UI primitives
 src/components/workspace/Workspace shell and static dashboard composition
-src/domains/             Reserved domain boundaries; no business features yet
+src/domains/             Domain logic: identity (live) and personas (fixture-backed)
 src/db/                  Drizzle connection and schema entry point (empty)
 src/lib/                 Environment validation, Supabase clients, utilities
 src/styles/              Global CSS and design tokens

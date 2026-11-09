@@ -1,6 +1,6 @@
 # Folioone
 
-Personal identity workspace. Auth and the identity profile (`/profile`) are persisted in Supabase under RLS; the dashboard still uses static presentation data.
+Personal identity workspace. Auth and the identity profile (`/profile`) are persisted in Supabase under RLS; Personas (`/personas`) are implemented against an in-memory fixture adapter only (not saved to the database); the dashboard still uses static presentation data.
 
 ## Requirements
 
@@ -23,7 +23,7 @@ Run `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm build
 
 ## RLS prerequisite
 
-User-owned operations now use the authenticated Supabase server client, which forwards the verified user's session to PostgREST for RLS evaluation. The Milestone 2 identity DDL has been manually executed and catalog-verified, and two-user RLS isolation passed on 2026-11-08 (see [Milestone 2C](docs/architecture/milestone-2c-rls-isolation-verification.md) and the [execution tracker](docs/sql/execution-tracker.md)). Milestone 3A Persona SQL is proposal-only and unexecuted.
+User-owned operations now use the authenticated Supabase server client, which forwards the verified user's session to PostgREST for RLS evaluation. The Milestone 2 identity DDL has been manually executed and catalog-verified, and two-user RLS isolation passed on 2026-11-08 (see [Milestone 2C](docs/architecture/milestone-2c-rls-isolation-verification.md) and the [execution tracker](docs/sql/execution-tracker.md)). Milestone 3A Persona SQL is proposal-only and unexecuted; Milestone 3B Persona screens do not use it (see [Milestone 3B](docs/architecture/milestone-3b-persona-application.md)). Milestone 3C authors the persistence SQL and a Supabase-backed repository, both unexecuted and off by default (`PERSONA_STORAGE=fixture`); see [Milestone 3C](docs/architecture/milestone-3c-persona-persistence.md).
 
 ## Tool versions
 

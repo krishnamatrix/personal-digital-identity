@@ -5,7 +5,7 @@ Folioone is a personal digital identity workspace: one canonical Master Identity
 ## Project Structure
 
 - `src/app/` — Next.js App Router routes (`login`, `profile`, dashboard) with colocated server actions.
-- `src/domains/<domain>/` — domain logic split into `*-schema.ts` (Zod), `*-repository.ts` (PostgREST access) and `*-service.ts`.
+- `src/domains/<domain>/` — domain logic split into `*-schema.ts` (Zod), `*-repository.ts` (PostgREST access) and `*-service.ts`. `src/domains/personas/` is fixture-backed (in-memory adapter) until the Persona SQL is approved and executed; do not add live Persona persistence without that approval. `SupabasePersonaRepository` exists but is off by default (`PERSONA_STORAGE`); enabling it requires the M3C SQL (`docs/sql/milestone-3c/`) to be approved, executed and verified.
 - `src/db/schema/` — Drizzle schema definitions (for SQL authoring only, never runtime queries).
 - `src/lib/` — env validation and Supabase clients (`supabase/server.ts`, `client.ts`).
 - `src/components/` — `ui/` (shadcn), `auth/`, `workspace/`.

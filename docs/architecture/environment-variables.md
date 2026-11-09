@@ -8,6 +8,8 @@ startup needs no Supabase configuration.
 | `NEXT_PUBLIC_SUPABASE_URL`      | Browser-safe                 | Creating a Supabase client | Folioone Supabase project endpoint.                                             |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser-safe publishable key | Creating a Supabase client | Identifies the project client; database access remains subject to Auth and RLS. |
 
+| `PERSONA_STORAGE` | Server-only | Optional | `fixture` (default, in-memory) or `supabase`. Choose `supabase` only after the M3C SQL, **including `004`**, has been approved, executed and verified (until `004`, a stale version hangs through PostgREST); see [Milestone 3C](milestone-3c-persona-persistence.md). Never prefix with `NEXT_PUBLIC_`. |
+
 The application has no PostgreSQL connection string and no service-role key.
 The server verifies the cookie-backed Supabase session with `auth.getUser()`;
 user-owned PostgREST requests then use that authenticated client. The user's
@@ -31,3 +33,22 @@ contains no database credentials and does not execute migrations.
 Never define `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, or
 `MIGRATION_DATABASE_URL` for application runtime. The service-role key bypasses
 RLS; the administrative connection bypasses RLS as well.
+
+## Environments
+
+The database schema is **`folioone` in every environment**; it is a constant in `src/lib/db-schema.ts`, not a variable. Environments differ only by the Supabase project (URL + anon key) and `PERSONA_STORAGE`:
+
+| Environment              | `NEXT_PUBLIC_SUPABASE_URL` / `_ANON_KEY`                                                                              | `PERSONA_STORAGE`                 | Where set                                              | Schema     |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------ | ---------- |
+| Local development        | local stack (`pnpm supabase:local:start`; `http://127.0.0.1:54321`, key from `supabase status`) or none for static UI | `fixture` (default) or `supabase` | `.env.local`                                           | `folioone` |
+| Local validation         | local stack, set by `pnpm validate` itself                                                                            | `supabase`                        | orchestrator process environment                       | `folioone` |
+| Hosted staging (Railway) | the existing hosted Supabase project                                                                                  | `supabase`                        | Railway variables (`NEXT_PUBLIC_*` also at build time) | `folioone` |
+| Production (future)      | a **separate** Supabase project                                                                                       | `supabase`                        | production service variables                           | `folioone` |
+
+Rules: no service-role key or database URL anywhere; do not add `NEXT_PUBLIC_*` or other variables for the schema (a configurable name could silently point a deployment at `public`); it is not a Storage bucket name; never reuse a project's keys in another environment. Template: `.env.example`.
+
+Post-deployment smoke tests read only `SMOKE_BASE_URL` and `SMOKE_USER_A_/B_EMAIL|PASSWORD` from the process environment ([staging-smoke-tests.md](staging-smoke-tests.md)); these are test-runner variables, never application variables.
+
+## Local validation
+
+`pnpm validate` builds its own environment (local Supabase URL and anon key from `supabase status`; random test-user passwords). It removes inherited `FOLIOONE_*`, `SUPABASE_*`, `NEXT_PUBLIC_SUPABASE*`, `PERSONA_STORAGE` and `DATABASE_URL` values, and refuses any non-loopback Supabase address. `FOLIOONE_VALIDATE=1` is set only by that workflow and is required by `vitest.local.config.ts` and `playwright.local.config.ts`. See [local-validation.md](local-validation.md).

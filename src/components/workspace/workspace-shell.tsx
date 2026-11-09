@@ -2,22 +2,11 @@
 
 import { useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import {
-  Activity,
-  BookOpen,
-  BriefcaseBusiness,
   ChevronDown,
-  CircleUserRound,
-  FileText,
-  FolderKanban,
-  GraduationCap,
   Home,
-  Lightbulb,
   Menu,
-  Network,
-  Settings,
-  Share2,
-  Sparkles,
   UserRound,
   UsersRound,
   X,
@@ -32,50 +21,41 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/**
+ * Active navigation lists only destinations that exist. Out-of-scope areas
+ * (Experience, Education, Skills, Portfolio, Projects, Highlights, Timeline,
+ * Articles, Digital Cards, CV Studio, AI Assistant, Connected Accounts,
+ * Privacy & Sharing, Account Settings) stay out until their screens ship, so
+ * nothing in the sidebar is a dead or misleading link.
+ */
 const groups = [
   {
     title: "MY IDENTITY",
     links: [
-      ["Overview", Home],
-      ["Profile", UserRound],
-      ["Experience", BriefcaseBusiness],
-      ["Education", GraduationCap],
-      ["Skills & Expertise", Sparkles],
-    ],
-  },
-  {
-    title: "MY PORTFOLIO",
-    links: [
-      ["Portfolio", Share2],
-      ["Projects", FolderKanban],
-      ["Highlights", Activity],
-      ["Timeline", Activity],
-      ["Articles & Thoughts", BookOpen],
+      { label: "Overview", href: "/", icon: Home },
+      { label: "Profile", href: "/profile", icon: UserRound },
     ],
   },
   {
     title: "MY PERSONAS",
-    links: [
-      ["Personas", UsersRound],
-      ["Digital Cards", CircleUserRound],
-    ],
-  },
-  {
-    title: "MY TOOLS",
-    links: [
-      ["CV Studio", FileText],
-      ["AI Assistant", Lightbulb],
-      ["Connected Accounts", Network],
-    ],
-  },
-  {
-    title: "SETTINGS",
-    links: [
-      ["Privacy & Sharing", Share2],
-      ["Account Settings", Settings],
-    ],
+    links: [{ label: "Personas", href: "/personas", icon: UsersRound }],
   },
 ] as const;
+
+function isActive(pathname: string, href: string) {
+  return href === "/"
+    ? pathname === "/"
+    : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function currentSection(pathname: string) {
+  for (const group of groups) {
+    for (const link of group.links) {
+      if (isActive(pathname, link.href)) return link.label;
+    }
+  }
+  return "Overview";
+}
 
 export function WorkspaceShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -114,29 +94,22 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
                 {group.title}
               </h2>
               <ul className="space-y-1">
-                {group.links.map(([label, Icon], index) => (
-                  <li key={label}>
-                    <a
-                      href={label === "Profile" ? "/profile" : "#"}
-                      onClick={(event) => {
-                        if (label !== "Profile") event.preventDefault();
-                        setOpen(false);
-                      }}
-                      aria-current={
-                        (pathname === "/" &&
-                          group.title === "MY IDENTITY" &&
-                          index === 0) ||
-                        (pathname === "/profile" && label === "Profile")
-                          ? "page"
-                          : undefined
-                      }
-                      className={`flex items-center gap-3 rounded px-3 py-2 text-[13px] ${(pathname === "/" && group.title === "MY IDENTITY" && index === 0) || (pathname === "/profile" && label === "Profile") ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"}`}
-                    >
-                      <Icon className="size-4" strokeWidth={1.7} />
-                      {label}
-                    </a>
-                  </li>
-                ))}
+                {group.links.map(({ label, href, icon: Icon }) => {
+                  const active = isActive(pathname, href);
+                  return (
+                    <li key={label}>
+                      <Link
+                        href={href}
+                        onClick={() => setOpen(false)}
+                        aria-current={active ? "page" : undefined}
+                        className={`flex items-center gap-3 rounded px-3 py-2 text-[13px] ${active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"}`}
+                      >
+                        <Icon className="size-4" strokeWidth={1.7} />
+                        {label}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           ))}
@@ -169,7 +142,9 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
             </Button>
             <span className="text-muted-foreground text-sm">
               My workspace <span className="mx-2">/</span>
-              <span className="text-foreground">Overview</span>
+              <span className="text-foreground">
+                {currentSection(pathname)}
+              </span>
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -186,8 +161,12 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Profile settings</DropdownMenuItem>
-                <DropdownMenuItem>Privacy & sharing</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/personas">Personas</Link>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <LogoutButton />

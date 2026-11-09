@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { FolioneClient } from "@/lib/db-schema";
 import { AuthorizationError } from "@/lib/supabase/server";
 import {
   profileSchema,
@@ -9,7 +9,7 @@ import {
 const PROFILE_COLUMNS =
   "account_id,display_name,headline,summary,location,website_url,linkedin_url,github_url,created_at,updated_at";
 
-type QueryClient = SupabaseClient;
+type QueryClient = FolioneClient;
 
 export class ProfilePersistenceError extends Error {
   constructor() {

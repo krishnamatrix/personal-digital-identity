@@ -1,0 +1,325 @@
+
+> folioone@0.1.0 validate /Users/krishnakumar/Projects/personal-digital-identity
+> node scripts/validate/validate.mjs
+
+
+[1m[validate] preflight (container runtime, Supabase CLI) ...[0m
+
+[1m[validate] typecheck ...[0m
+
+> folioone@0.1.0 typecheck /Users/krishnakumar/Projects/personal-digital-identity
+> tsc --noEmit
+
+
+[1m[validate] lint ...[0m
+
+> folioone@0.1.0 lint /Users/krishnakumar/Projects/personal-digital-identity
+> eslint .
+
+
+[1m[validate] format check ...[0m
+
+> folioone@0.1.0 format:check /Users/krishnakumar/Projects/personal-digital-identity
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+
+[1m[validate] unit tests (fixture adapter, no database) ...[0m
+
+> folioone@0.1.0 test /Users/krishnakumar/Projects/personal-digital-identity
+> vitest run
+
+
+ RUN  v3.2.4 /Users/krishnakumar/Projects/personal-digital-identity
+
+ ✓ tests/supabase-middleware.test.ts (1 test) 62ms
+ ✓ tests/supabase-authenticated-client.test.ts (2 tests) 72ms
+ ✓ tests/env.test.ts (3 tests) 76ms
+ ✓ tests/profile-editor.test.tsx (1 test) 54ms
+ ✓ tests/smoke.test.tsx (3 tests) 88ms
+ ✓ tests/workspace-shell.test.tsx (4 tests) 129ms
+ ✓ tests/ui-primitives.test.tsx (9 tests) 294ms
+ ✓ tests/persona-acceptance-fixes.test.tsx (15 tests) 330ms
+ ✓ tests/persona-sql-package.test.ts (44 tests) 11ms
+ ✓ tests/folioone-schema-package.test.ts (19 tests) 19ms
+ ✓ tests/persona-supabase-repository.test.ts (44 tests) 14ms
+ ✓ tests/persona-repository-contract.test.ts (15 tests) 45ms
+ ✓ tests/persona-service.test.ts (25 tests) 36ms
+ ✓ tests/persona-session-isolation.test.ts (5 tests) 20ms
+ ✓ tests/persona-isolation.test.ts (9 tests) 23ms
+ ✓ tests/persona-acceptance-states.test.tsx (12 tests) 788ms
+ ✓ tests/persona-atomicity.test.ts (11 tests) 15ms
+ ✓ tests/persona-memory-repository.test.ts (33 tests) 18ms
+ ✓ tests/auth-actions.test.ts (4 tests) 8ms
+ ✓ tests/local-validation-workflow.test.ts (9 tests) 27ms
+stderr | tests/persona-actions.test.ts > persona server actions > hides unexpected failures behind a generic message
+[personas] unexpected action failure: Error: connection string postgres://secret
+
+ ✓ tests/persona-actions.test.ts (6 tests) 8ms
+ ✓ tests/persona-boundary.test.ts (30 tests) 12ms
+ ✓ tests/persona-reapply-and-preview.test.tsx (9 tests) 1230ms
+   ✓ Reapply never reverts changes the user did not make > Details: reapplying a name edit keeps another tab's audience and description changes  302ms
+   ✓ Preview uses the same effective-content resolver as the editor > the create-flow review and the saved editor preview render identical content  362ms
+ ✓ tests/runtime-database-boundary.test.ts (1 test) 8ms
+ ✓ tests/identity-profile-service.test.ts (4 tests) 5ms
+ ✓ tests/identity-profile-repository.test.ts (3 tests) 4ms
+ ✓ tests/health-route.test.ts (1 test) 6ms
+ ✓ tests/identity-profile-schema.test.ts (4 tests) 3ms
+ ✓ tests/persona-resolver.test.ts (7 tests) 4ms
+ ✓ tests/persona-review-doc.test.ts (7 tests) 5ms
+ ✓ tests/server-log.test.ts (4 tests) 3ms
+ ✓ tests/staging-smoke-suite.test.ts (6 tests) 3ms
+ ✓ tests/persona-ui.test.tsx (37 tests) 2853ms
+
+ Test Files  33 passed (33)
+      Tests  387 passed (387)
+   Start at  16:01:56
+   Duration  4.12s (transform 1.06s, setup 4.54s, collect 4.48s, tests 6.27s, environment 10.21s, prepare 1.57s)
+
+
+[1m[validate] start local Supabase (always a fresh stack with the current config) ...[0m
+
+[1m[validate] read local connection settings ...[0m
+
+[1m[validate] prove .env.local cannot redirect the run to a hosted project ...[0m
+effective Supabase host after loading env files: 127.0.0.1:54321
+
+[1m[validate] canonical SQL package is in sync with the approved sources ...[0m
+
+[1m[validate] clean local database (supabase db reset, no seed) ...[0m
+
+[1m[validate] fingerprint schema public (before) ...[0m
+public fingerprint: TOTAL||d41d8cd98f00b204e9800998ecf8427e
+
+[1m[validate] apply canonical schema package (folioone), verbatim ...[0m
+applied docs/sql/folioone-schema/001-create-schema.sql
+applied docs/sql/folioone-schema/002-identity-tables.sql
+applied docs/sql/folioone-schema/003-identity-rls.sql
+applied docs/sql/folioone-schema/004-persona-tables.sql
+applied docs/sql/folioone-schema/005-persona-rls-and-grants.sql
+applied docs/sql/folioone-schema/006-persona-functions.sql
+
+[1m[validate] assert the folioone catalog shape ...[0m
+
+[1m[validate] create dedicated local test users (Auth sign-up, anon key only) ...[0m
+
+[1m[validate] prove requests without a schema header cannot reach application tables ...[0m
+default schema has no application tables (404 relation does not exist); folioone answers HTTP 200
+
+[1m[validate] DB integration: RLS isolation (real local Auth + PostgREST) ...[0m
+
+ RUN  v3.2.4 /Users/krishnakumar/Projects/personal-digital-identity
+
+stdout | tests/hosted/rls-isolation.hosted.ts > Hosted Supabase two-user RLS isolation > prepares each user's account and profile without replacing existing data
+Initialization ready: User A account created, profile created; User B account created, profile created.
+
+stdout | tests/hosted/rls-isolation.hosted.ts > Hosted Supabase two-user RLS isolation > allows each authenticated user to read only their own records
+Own-record reads passed: each authenticated user received exactly their own account and profile row.
+
+stdout | tests/hosted/rls-isolation.hosted.ts > Hosted Supabase two-user RLS isolation > returns no User B rows to User A for cross-user reads
+Cross-user reads passed: User A received zero User B account and profile rows.
+
+stdout | tests/hosted/rls-isolation.hosted.ts > Hosted Supabase two-user RLS isolation > denies User A updates to User B and independently verifies the original profile
+Cross-user update passed: returned zero rows; User B independently confirmed the original profile remained unchanged.
+
+stdout | tests/hosted/rls-isolation.hosted.ts > Hosted Supabase two-user RLS isolation > rejects cross-user account and profile inserts without changing User B
+Cross-user inserts passed: accounts RLS/privilege denied (42501), identity_profiles RLS/privilege denied (42501); User B's account and profile remained unchanged.
+
+stdout | tests/hosted/rls-isolation.hosted.ts > Hosted Supabase two-user RLS isolation > denies anonymous reads and writes to private identity records
+Anonymous access passed: accounts read denied (42501), profiles read denied (42501); both writes were rejected with SQLSTATE 42501; both users' rows remained unchanged.
+
+stdout | tests/hosted/rls-isolation.hosted.ts > Hosted Supabase two-user RLS isolation > keeps User A and User B sessions independent and cannot use altered IDs to cross the boundary
+Session separation passed: Auth verified distinct User A/User B sessions; signing out A left B authenticated and able to read B's own profile.
+
+ ✓ tests/hosted/rls-isolation.hosted.ts (7 tests) 215ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  16:02:36
+   Duration  425ms (transform 34ms, setup 10ms, collect 56ms, tests 215ms, environment 0ms, prepare 38ms)
+
+
+[1m[validate] DB integration: Persona persistence, RPCs, lifecycle, versions, defaults ...[0m
+
+ RUN  v3.2.4 /Users/krishnakumar/Projects/personal-digital-identity
+
+stderr | tests/hosted/persona-persistence.hosted.ts > hosted persona security and integrity > GraphQL fails closed: NO write path exists (STOP AND REPORT if any does)
+[persona-persistence] GraphQL Mutation type not visible: INCONCLUSIVE (not a pass). Review the GraphQL schema by hand.
+
+stdout | tests/hosted/persona-persistence.hosted.ts > hosted persona security and integrity > account anchor: created only when absent, and left untouched when present
+[persona-persistence] account anchor branches exercised: A: present (left untouched); B: present (left untouched)
+
+ ✓ tests/hosted/persona-persistence.hosted.ts (35 tests | 1 skipped) 1118ms
+
+ Test Files  1 passed (1)
+      Tests  34 passed | 1 skipped (35)
+   Start at  16:02:37
+   Duration  1.34s (transform 46ms, setup 9ms, collect 94ms, tests 1.12s, environment 0ms, prepare 28ms)
+
+
+[1m[validate] DB integration: account anchor absent branch (fresh user) ...[0m
+
+ RUN  v3.2.4 /Users/krishnakumar/Projects/personal-digital-identity
+
+stdout | tests/hosted/persona-anchor-absent.hosted.ts > account anchor absent branch (dedicated user C) > creates the anchor, the Persona, 7 selections, 9 sections and 1 revision atomically; a failed create leaves nothing; A and C cannot see each other
+[persona-anchor-absent] absent branch exercised for user C; anchor remains until anchor-test-cleanup.sql is run
+
+ ✓ tests/hosted/persona-anchor-absent.hosted.ts (1 test) 179ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  16:02:39
+   Duration  362ms (transform 31ms, setup 9ms, collect 65ms, tests 179ms, environment 0ms, prepare 28ms)
+
+
+[1m[validate] DB integration: concurrent first-time creation (fresh user) ...[0m
+
+ RUN  v3.2.4 /Users/krishnakumar/Projects/personal-digital-identity
+
+stdout | tests/hosted/persona-anchor-concurrent.hosted.ts > concurrent creates for one user (disposable user C) > first-time race, same session: both succeed, one anchor, no partial or torn state; then name and default races
+[persona-concurrency] scenario 1 (first-time, distinct names): both created, positions 0/1, requests overlapped=true
+
+stdout | tests/hosted/persona-anchor-concurrent.hosted.ts > concurrent creates for one user (disposable user C) > first-time race, same session: both succeed, one anchor, no partial or torn state; then name and default races
+[persona-concurrency] scenario 2 (same name, anchor present): one created, one duplicate; overlapped=true
+
+stdout | tests/hosted/persona-anchor-concurrent.hosted.ts > concurrent creates for one user (disposable user C) > first-time race, same session: both succeed, one anchor, no partial or torn state; then name and default races
+[persona-concurrency] scenario 3 (both default): one default remains; displaced is v2; overlapped=true
+
+ ✓ tests/hosted/persona-anchor-concurrent.hosted.ts (1 test) 249ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  16:02:39
+   Duration  429ms (transform 33ms, setup 9ms, collect 64ms, tests 249ms, environment 0ms, prepare 29ms)
+
+
+[1m[validate] production build (local Supabase configuration) ...[0m
+
+> folioone@0.1.0 build /Users/krishnakumar/Projects/personal-digital-identity
+> next build
+
+   ▲ Next.js 15.5.29
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 2.2s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/5) ...
+   Generating static pages (1/5) 
+   Generating static pages (2/5) 
+   Generating static pages (3/5) 
+ ✓ Generating static pages (5/5)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    2.46 kB         146 kB
+├ ○ /_not-found                            995 B         103 kB
+├ ƒ /api/health                            121 B         103 kB
+├ ○ /login                               1.27 kB         116 kB
+├ ƒ /personas                            7.07 kB         155 kB
+├ ƒ /personas/[id]                       11.2 kB         181 kB
+├ ƒ /personas/new                          189 B         170 kB
+└ ƒ /profile                             3.72 kB         147 kB
++ First Load JS shared by all             102 kB
+  ├ chunks/247-10a467e41207586a.js       46.3 kB
+  ├ chunks/fb33e521-2312cd3c3323afb1.js  54.2 kB
+  └ other shared chunks (total)          1.93 kB
+
+
+ƒ Middleware                             82.8 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[1m[validate] prove the build contains no hosted Supabase address ...[0m
+no ".supabase.co" address found in .next/static or .next/server
+
+[1m[validate] headless Playwright E2E against the production build ...[0m
+
+Running 40 tests using 1 worker
+
+  ✓   1 [chromium] › e2e/dashboard.spec.ts:3:5 › workspace shell and dashboard render (380ms)
+  ✓   2 [chromium] › e2e/health.spec.ts:3:5 › health check answers 200 with a fixed uncached body (15ms)
+  ✓   3 [chromium] › e2e/personas-supabase.spec.ts:67:7 › Persona persistence against Supabase › UI creation writes the expected rows; B cannot reach them; A's data survives a reload (4.3s)
+  ✓   4 [chromium] › e2e/personas-supabase.spec.ts:153:7 › Persona persistence against Supabase › signed-out visitors are sent to sign in and see no Persona data (142ms)
+  ✓   5 [chromium] › e2e/personas-supabase.spec.ts:161:7 › Persona persistence against Supabase › cleanup: no E2E Personas remain for A or B (146ms)
+  ✓   6 [chromium] › e2e/personas.spec.ts:65:7 › signed out › Personas is a working destination in the workspace navigation (150ms)
+  ✓   7 [chromium] › e2e/personas.spec.ts:79:9 › signed out › cannot see Personas at /personas (140ms)
+  ✓   8 [chromium] › e2e/personas.spec.ts:79:9 › signed out › cannot see Personas at /personas/new (479ms)
+  ✓   9 [chromium] › e2e/personas.spec.ts:79:9 › signed out › cannot see Personas at /personas/example-id (159ms)
+  ✓  10 [chromium] › e2e/personas.spec.ts:109:7 › signed in (desktop) › list: navigation, breadcrumb, filters and the fixture notice (938ms)
+  ✓  11 [chromium] › e2e/personas.spec.ts:142:7 › signed in (desktop) › create: validation, defaults excluded and hidden, four steps, save, reload (2.6s)
+  ✓  12 [chromium] › e2e/personas.spec.ts:225:7 › signed in (desktop) › preview: private, accurate, hides hidden sections, shows provenance, no internal IDs (1.5s)
+  ✓  13 [chromium] › e2e/personas.spec.ts:271:7 › signed in (desktop) › preview reflects My Identity values when they exist (read-only) (1.7s)
+  ✓  14 [chromium] › e2e/personas.spec.ts:291:7 › signed in (desktop) › presentation: write for this Persona, intentional blank, reset to My Identity (2.7s)
+  ✓  15 [chromium] › e2e/personas.spec.ts:324:7 › signed in (desktop) › content: ordering by button, section rename, bulk action confirmation (2.5s)
+  ✓  16 [chromium] › e2e/personas.spec.ts:361:7 › signed in (desktop) › lifecycle: default, duplicate, archive, restore, delete only when archived (3.4s)
+  ✓  17 [chromium] › e2e/personas.spec.ts:427:7 › signed in (desktop) › conflict: reapply keeps unrelated changes made in another tab (2.6s)
+  ✓  18 [chromium] › e2e/personas.spec.ts:466:7 › signed in (desktop) › conflict: reload latest discards unsaved edits (2.5s)
+  ✓  19 [chromium] › e2e/personas.spec.ts:487:7 › signed in (desktop) › keyboard and announcements: switches, buttons and dialogs (2.1s)
+  ✓  20 [chromium] › e2e/personas.spec.ts:555:7 › signed in (mobile 390x844) › navigation works from the menu and nothing scrolls sideways (371ms)
+  ✓  21 [chromium] › e2e/personas.spec.ts:568:7 › signed in (mobile 390x844) › create flow and editor tabs fit the viewport and stay usable (1.8s)
+  ✓  22 [chromium] › e2e/personas.spec.ts:612:7 › signed in: states, titles, editing and session handling › empty state: first-run guidance when there are no Personas (686ms)
+  ✓  23 [chromium] › e2e/personas.spec.ts:656:7 › signed in: states, titles, editing and session handling › an unknown or malformed Persona id shows the branded not-found state inside the workspace (505ms)
+  ✓  24 [chromium] › e2e/personas.spec.ts:681:7 › signed in: states, titles, editing and session handling › each Persona screen has its own page title (1.8s)
+  ✓  25 [chromium] › e2e/personas.spec.ts:695:7 › signed in: states, titles, editing and session handling › details: edit, save, announced, and persisted across a reload and in the list (3.1s)
+  ✓  26 [chromium] › e2e/personas.spec.ts:727:7 › signed in: states, titles, editing and session handling › details: a duplicate name is rejected with a field error and nothing changes (3.3s)
+  ✓  27 [chromium] › e2e/personas.spec.ts:747:7 › signed in: states, titles, editing and session handling › a lapsed session shows a way back, keeps the page, and changes nothing (2.0s)
+  ✓  28 [chromium] › e2e/personas.spec.ts:774:7 › signed in: states, titles, editing and session handling › unsaved edits ask before the tab closes, and saving clears the warning (1.1s)
+  ✓  29 [chromium] › e2e/personas.spec.ts:797:7 › signed in: states, titles, editing and session handling › the dashboard links to the real Personas (427ms)
+  ✓  30 [chromium] › e2e/personas.spec.ts:830:7 › signed in (tablet 768x1024) › field rows keep their controls on one line and nothing scrolls sideways (2.2s)
+  ✓  31 [chromium] › e2e/profile-auth.spec.ts:8:5 › unauthenticated visitor cannot see the private profile (138ms)
+  ✓  32 [chromium] › e2e/profile-auth.spec.ts:28:5 › development user initializes, updates, reloads, and signs out (832ms)
+  ✓  33 [chromium] › e2e/staging-smoke.spec.ts:75:7 › staging smoke › 1. health endpoint answers (9ms)
+  ✓  34 [chromium] › e2e/staging-smoke.spec.ts:81:7 › staging smoke › 2. the dedicated test user can sign in (282ms)
+  ✓  35 [chromium] › e2e/staging-smoke.spec.ts:85:7 › staging smoke › 3. account and profile load from the database (no unavailable state) (263ms)
+  ✓  36 [chromium] › e2e/staging-smoke.spec.ts:93:7 › staging smoke › 4. the Persona list loads (681ms)
+  ✓  37 [chromium] › e2e/staging-smoke.spec.ts:106:7 › staging smoke › 5. a tagged Persona can be created (also creates the account anchor if absent) (1.6s)
+  ✓  38 [chromium] › e2e/staging-smoke.spec.ts:122:7 › staging smoke › 6. an update persists across a reload and shows in the list (2.5s)
+  ✓  39 [chromium] › e2e/staging-smoke.spec.ts:143:7 › staging smoke › 7. a second user cannot see or open it (394ms)
+  ✓  40 [chromium] › e2e/staging-smoke.spec.ts:163:7 › staging smoke › 8. signing out closes the protected routes (545ms)
+
+  40 passed (55.7s)
+
+To open last HTML report run:
+[36m[39m
+[36m  pnpm exec playwright show-report playwright-report/local[39m
+[36m[39m
+
+[1m[validate] schema public is unchanged after the whole run (fingerprint + row counts) ...[0m
+public fingerprint identical: TOTAL||d41d8cd98f00b204e9800998ecf8427e; all public tables have 0 rows
+
+[1m[validate] cleanup: stopping local Supabase and discarding its data[0m
+
+[validate] summary
+  PASS  preflight (container runtime, Supabase CLI)  (0.8s)
+  PASS  typecheck  (1.0s)
+  PASS  lint  (1.9s)
+  PASS  format check  (1.7s)
+  PASS  unit tests (fixture adapter, no database)  (4.6s)
+  PASS  start local Supabase (always a fresh stack with the current config)  (23.1s)
+  PASS  read local connection settings  (0.1s)
+  PASS  prove .env.local cannot redirect the run to a hosted project  (0.0s)
+  PASS  canonical SQL package is in sync with the approved sources  (0.0s)
+  PASS  clean local database (supabase db reset, no seed)  (11.0s)
+  PASS  fingerprint schema public (before)  (0.1s)
+  PASS  apply canonical schema package (folioone), verbatim  (0.5s)
+  PASS  assert the folioone catalog shape  (0.1s)
+  PASS  create dedicated local test users (Auth sign-up, anon key only)  (0.3s)
+  PASS  prove requests without a schema header cannot reach application tables  (0.1s)
+  PASS  DB integration: RLS isolation (real local Auth + PostgREST)  (1.0s)
+  PASS  DB integration: Persona persistence, RPCs, lifecycle, versions, defaults  (1.8s)
+  PASS  DB integration: account anchor absent branch (fresh user)  (0.8s)
+  PASS  DB integration: concurrent first-time creation (fresh user)  (0.8s)
+  PASS  production build (local Supabase configuration)  (10.8s)
+  PASS  prove the build contains no hosted Supabase address  (0.0s)
+  PASS  headless Playwright E2E against the production build  (56.5s)
+  PASS  schema public is unchanged after the whole run (fingerprint + row counts)  (0.1s)
+
+[validate] ALL STEPS PASSED
+
+exit=0

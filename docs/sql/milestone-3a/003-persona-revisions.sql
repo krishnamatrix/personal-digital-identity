@@ -4,7 +4,7 @@
 -- Prerequisites: files 001 and 002 were manually executed and verified; no
 -- persona_revisions relation exists; developer has reviewed the retention choice
 -- (Persona deletion cascades this history; account-deletion policy is AD-006).
--- Execution order: 3 of 4 Milestone 3A SQL files.
+-- Execution order: 3 of 5 Milestone 3A SQL files.
 -- Repeatability: one-time; stop if target objects exist.
 -- Expected outcome: per-Persona ordered history owned by the same account.
 
@@ -50,9 +50,13 @@ COMMIT;
 
 -- Expected verification: owner-only catalog object; same-owner composite FK,
 -- append-only revision number uniqueness, actor and JSON-object checks exist.
--- Authenticated access remains unavailable until file 004 installs the RPC-path
--- RLS gate and file 005 installs the atomic mutation RPCs. No direct revision
--- insert is possible outside those approved RPC paths.
+-- Authenticated access remains unavailable until file 004 installs the
+-- request-path-gated RLS and column grants and file 005 installs the atomic
+-- mutation RPCs. Revision rows can only be inserted by an approved RPC request
+-- (gate in 004); there is no UPDATE or DELETE grant or policy. Persona deletion
+-- removes history through the ON DELETE CASCADE foreign key (referential
+-- integrity actions run as the table owner), so the 'deleted' event_type is
+-- permitted by the check but is not written by any proposed RPC.
 --
 -- Rollback limitation: dropping this table destroys all Persona revision history.
 -- Only before data exists and with explicit developer approval:

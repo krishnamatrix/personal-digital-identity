@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ArrowUpRight, Eye, Plus, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -111,10 +112,17 @@ export function Dashboard() {
               Different sides of your story, thoughtfully curated.
             </p>
           </div>
-          <Button variant="ghost" size="sm">
-            <Plus className="size-4" />
-            New persona
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/personas">Manage personas</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/personas/new">
+                <Plus className="size-4" />
+                New persona
+              </Link>
+            </Button>
+          </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           {personas.map((persona) => (
@@ -128,10 +136,9 @@ export function Dashboard() {
               <div className="flex-1">
                 <h3 className="text-sm font-medium">{persona.name}</h3>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  {persona.detail} persona
+                  Example · {persona.detail} persona
                 </p>
               </div>
-              <ArrowUpRight className="text-muted-foreground size-4" />
             </article>
           ))}
         </div>

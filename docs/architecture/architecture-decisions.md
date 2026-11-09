@@ -52,3 +52,10 @@
 - **Rationale:** Maintain product coherence and user trust while translating the approved design into implementation tokens and components.
 - **Consequences:** Do not add feeds, likes, comments, generic purple-gradient AI styling, excessive glassmorphism, or an independent redesign. AI output cannot silently edit or publish canonical data.
 - **Unresolved:** No product or UX direction remains open in this record; implementation details should follow the approved direction.
+
+## AD-008: Canonical Application Schema `folioone`
+
+- **Decision:** All Folioone application data lives in one PostgreSQL schema named `folioone` in every environment (local, staging, future production). Environments are separated by Supabase project and credentials, never by schema name. `folioone_staging` and `folioone_prod` are not used.
+- **Rationale:** One name removes per-environment SQL, code and test variants, and keeps application data out of `public`, which Supabase exposes by default and shares with other tooling.
+- **Consequences:** The schema name is a single constant (`FOLIOONE_SCHEMA`, `src/lib/db-schema.ts`) passed as `db.schema` to every Supabase client; repositories are typed against that client so a client without it does not compile. The approved design is unchanged (RLS enabled and forced, request-path gate, nine RPC contracts, PT409, account anchor, advisory and row locking, append-only revisions, SECURITY INVOKER with empty `search_path`). The hosted SQL is the generated package in `docs/sql/folioone-schema/`, executed manually by the developer; it never touches `public` or Auth users and copies no data. Existing development data in `public` is left in place and unused. See [database-schema-folioone.md](database-schema-folioone.md).
+- **Unresolved:** Hosted execution is pending the developer's manual run and catalog evidence. Retiring the legacy `public` objects is a separate, later decision.

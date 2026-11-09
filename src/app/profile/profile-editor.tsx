@@ -106,7 +106,7 @@ export function ProfileEditor({ profile }: { profile: EditableProfile }) {
             placeholder="What do you care about, and what kind of work do you do?"
           />
           {state.fieldErrors?.summary?.[0] && (
-            <p id="summary-error" className="text-sm text-red-700">
+            <p id="summary-error" className="text-danger text-sm">
               {state.fieldErrors.summary[0]}
             </p>
           )}
@@ -126,7 +126,7 @@ export function ProfileEditor({ profile }: { profile: EditableProfile }) {
             role={state.status === "error" ? "alert" : "status"}
             className={
               state.status === "error"
-                ? "text-sm text-red-700"
+                ? "text-danger text-sm"
                 : "text-muted-foreground text-sm"
             }
           >
@@ -166,7 +166,7 @@ function ProfileField({
         {...inputProps}
       />
       {error && (
-        <p id={errorId} className="text-sm text-red-700">
+        <p id={errorId} className="text-danger text-sm">
           {error}
         </p>
       )}
