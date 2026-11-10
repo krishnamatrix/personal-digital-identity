@@ -8,7 +8,7 @@ import type { FieldDef } from "@/domains/identity/entry-kinds";
 export type FieldValue = string | boolean | string[] | undefined;
 
 const selectClass =
-  "border-border bg-card focus-visible:ring-accent h-10 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-2";
+  "border-border bg-card focus-visible:ring-foreground/15 h-10 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-2";
 
 /** One control per FieldDef type; used by both the profile forms and the list editors. */
 export function FieldControl({
@@ -123,7 +123,7 @@ export function FieldControl({
         </p>
       )}
       {error && (
-        <p id={`${id}-error`} className="text-xs text-red-700">
+        <p id={`${id}-error`} className="text-danger text-xs">
           {error}
         </p>
       )}

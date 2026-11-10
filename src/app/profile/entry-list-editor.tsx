@@ -124,7 +124,7 @@ export function EntryListEditor({
     <section aria-label={def.label} className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {heading ? (
-          <h3 className="font-serif text-xl">{def.label}</h3>
+          <h3 className="font-display text-xl">{def.label}</h3>
         ) : (
           <span />
         )}
@@ -335,7 +335,7 @@ export function EntryListEditor({
           <p
             role={status.ok ? "status" : "alert"}
             className={
-              status.ok ? "text-sm text-green-800" : "text-sm text-red-700"
+              status.ok ? "text-sm text-green-800" : "text-danger text-sm"
             }
           >
             {status.text}

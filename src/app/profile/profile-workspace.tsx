@@ -141,10 +141,10 @@ export function ProfileWorkspace({
     <div className="space-y-6">
       <header className="space-y-4">
         <div>
-          <p className="text-accent text-xs font-semibold tracking-[.14em] uppercase">
-            Master Identity
-          </p>
-          <h1 className="mt-2 font-serif text-3xl">Your profile</h1>
+          <p className="eyebrow">Master Identity</p>
+          <h1 className="font-display mt-2 text-3xl md:text-[2.5rem] md:leading-tight">
+            Your profile
+          </h1>
           <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
             Keep your core story in one private place. You choose what to
             include in a published presentation later.
@@ -234,7 +234,7 @@ export function ProfileWorkspace({
         </nav>
 
         <div className="border-border bg-card min-w-0 rounded-lg border p-5 md:p-8">
-          <h2 className="font-serif text-2xl">{current.label}</h2>
+          <h2 className="font-display text-2xl">{current.label}</h2>
           <p className="text-muted-foreground mt-1 mb-6 text-sm">
             {current.blurb}
           </p>

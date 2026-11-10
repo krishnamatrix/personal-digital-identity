@@ -223,10 +223,10 @@ export function WebsiteWorkspace({
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-accent text-xs font-semibold tracking-[.14em] uppercase">
-            My presence
-          </p>
-          <h1 className="mt-2 font-serif text-3xl">My Website</h1>
+          <p className="eyebrow">My presence</p>
+          <h1 className="font-display mt-2 text-3xl md:text-[2.5rem] md:leading-tight">
+            My Website
+          </h1>
           <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
             Turn your Master Identity into a personal website. You choose what
             is shown, and nothing goes public until you publish.
@@ -283,7 +283,7 @@ export function WebsiteWorkspace({
           <div className="space-y-6">
             {!created ? (
               <div className="space-y-3">
-                <h2 className="font-serif text-2xl">Create your website</h2>
+                <h2 className="font-display text-2xl">Create your website</h2>
                 <p className="text-muted-foreground max-w-xl text-sm leading-6">
                   Pick an address like{" "}
                   <span className="font-mono">
@@ -516,7 +516,7 @@ export function WebsiteWorkspace({
           (created ? (
             <div className="space-y-8">
               <section className="space-y-3">
-                <h2 className="font-serif text-xl">Search and sharing</h2>
+                <h2 className="font-display text-xl">Search and sharing</h2>
                 <p className="text-muted-foreground text-sm">
                   Leave blank to use your name, headline and short biography.
                 </p>
@@ -553,7 +553,7 @@ export function WebsiteWorkspace({
                 {publishBar}
               </section>
               <section className="space-y-3">
-                <h2 className="font-serif text-xl">Publishing</h2>
+                <h2 className="font-display text-xl">Publishing</h2>
                 <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-sm">
                   <li>
                     Publishing saves your draft and creates a snapshot of the

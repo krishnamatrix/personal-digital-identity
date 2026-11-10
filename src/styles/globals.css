@@ -1,21 +1,37 @@
 @import "tailwindcss";
 
+/*
+ * Folioone workspace: neutral "browser chrome" direction.
+ * A soft grey frame (sidebar + chrome) holds a lighter canvas panel; the active
+ * navigation item is a curved tab that flows into that panel, the same way an
+ * active browser tab flows into its toolbar. Cards are white with hairline
+ * borders and generous radii; the primary action is a black pill; status is
+ * green. The public website keeps its own theme palettes (site-view.tsx).
+ */
 :root {
-  --background: #f7f5f0;
-  --foreground: #252622;
-  --sidebar: #292b28;
-  --sidebar-foreground: #f4f1e9;
-  --muted: #eeece5;
-  --muted-foreground: #77776f;
-  --border: #e4e1d9;
-  --accent: #a65f43;
-  --accent-soft: #f0e4dc;
-  --card: #fffefa;
-  /* Semantic danger: restrained brick red for errors and destructive actions. */
-  --danger: #9b3a32;
-  --danger-soft: #f6e6e3;
+  --background: #f5f5f7;
+  --foreground: #1d1d1f;
+  --sidebar: #e8e9ec;
+  --sidebar-foreground: #1d1d1f;
+  --sidebar-muted: #6e6e73;
+  --muted: #efeff2;
+  --muted-foreground: #6e6e73;
+  --border: #e5e5ea;
+  --accent: #1d1d1f;
+  --accent-soft: #ececf0;
+  --card: #ffffff;
+  --success: #2f9e62;
+  --success-soft: #e7f5ed;
+  /* Semantic danger: restrained red for errors and destructive actions. */
+  --danger: #c4372d;
+  --danger-soft: #fbeceb;
   --font-editorial: Georgia, "Times New Roman", serif;
-  --font-sans: Arial, Helvetica, sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  /* Radius of the concave flare where the active nav tab meets the canvas. */
+  --tab-flare: 18px;
 }
 
 @theme inline {
@@ -23,16 +39,87 @@
   --color-foreground: var(--foreground);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
   --color-card: var(--card);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --font-sans: var(--font-sans);
   --font-serif: var(--font-editorial);
+  --font-mono: var(--font-mono);
+}
+
+/* Workspace radii: softer cards (lg) and controls (md) than Tailwind's defaults. */
+@theme {
+  --radius-md: 0.75rem;
+  --radius-lg: 1.25rem;
+}
+
+/* Workspace display type: the sans face, semibold and tightly tracked. */
+@utility font-display {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+/* Small uppercase, letter-spaced label used above stats and table columns. */
+@utility eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/*
+ * Curved navigation tab. The active link takes the canvas colour and, from md
+ * up, grows two concave flares (top and bottom, at its right edge) so it reads
+ * as one surface with the canvas panel beside it.
+ */
+.nav-tab {
+  position: relative;
+}
+.nav-tab[aria-current="page"] {
+  background: var(--background);
+  color: var(--foreground);
+}
+@media (min-width: 768px) {
+  .nav-tab[aria-current="page"] {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    margin-right: 0;
+  }
+  .nav-tab[aria-current="page"]::before,
+  .nav-tab[aria-current="page"]::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    width: var(--tab-flare);
+    height: var(--tab-flare);
+    pointer-events: none;
+  }
+  .nav-tab[aria-current="page"]::before {
+    top: calc(var(--tab-flare) * -1);
+    background: radial-gradient(
+      circle at 0 0,
+      transparent calc(var(--tab-flare) - 0.5px),
+      var(--background) var(--tab-flare)
+    );
+  }
+  .nav-tab[aria-current="page"]::after {
+    bottom: calc(var(--tab-flare) * -1);
+    background: radial-gradient(
+      circle at 0 100%,
+      transparent calc(var(--tab-flare) - 0.5px),
+      var(--background) var(--tab-flare)
+    );
+  }
 }
 
 * {

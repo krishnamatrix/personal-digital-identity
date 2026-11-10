@@ -34,7 +34,7 @@ export function ForgotPasswordForm({ linkProblem }: { linkProblem: boolean }) {
   return (
     <form action={formAction} className="space-y-5" noValidate>
       {linkProblem && (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-danger text-sm" role="alert">
           That link is invalid or has expired. Request a new one below.
         </p>
       )}
@@ -46,7 +46,7 @@ export function ForgotPasswordForm({ linkProblem }: { linkProblem: boolean }) {
         required
       />
       {state.status === "error" && (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-danger text-sm" role="alert">
           {state.message}
         </p>
       )}

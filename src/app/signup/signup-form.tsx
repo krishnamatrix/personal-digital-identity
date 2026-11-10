@@ -14,7 +14,7 @@ export function SignupForm() {
   if (state.status === "check_email") {
     return (
       <div className="space-y-4" role="status">
-        <h2 className="font-serif text-xl">Check your email</h2>
+        <h2 className="font-display text-xl">Check your email</h2>
         <p className="text-muted-foreground text-sm leading-6">
           {state.message} Open it on this device and select the link to confirm
           your address and start setting up your profile.
@@ -64,7 +64,7 @@ export function SignupForm() {
         error={state.fieldErrors?.confirmPassword}
       />
       {state.status === "error" && !state.fieldErrors && (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-danger text-sm" role="alert">
           {state.message}
         </p>
       )}

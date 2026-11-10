@@ -13,6 +13,7 @@ import {
   fieldsForStep,
   ONBOARDING_STEP_COUNT,
 } from "@/domains/identity/onboarding-steps";
+import { BrandMark } from "@/components/brand-mark";
 import { PRIMARY_PURPOSES } from "@/domains/identity/profile-schema";
 
 type Values = Record<string, string>;
@@ -134,9 +135,7 @@ export function OnboardingFlow({
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col px-5 py-8 md:py-14">
       <header className="flex items-center justify-between">
-        <span className="font-serif text-2xl tracking-tight">
-          folioone<span className="text-[#c88c68]">.</span>
-        </span>
+        <BrandMark />
         <Link
           href="/profile"
           className="text-muted-foreground text-sm underline-offset-4 hover:underline"
@@ -158,14 +157,16 @@ export function OnboardingFlow({
           aria-label="Onboarding progress"
         >
           <div
-            className="bg-accent h-full transition-all"
+            className="bg-foreground h-full rounded-full transition-all"
             style={{ width: `${(step / ONBOARDING_STEP_COUNT) * 100}%` }}
           />
         </div>
       </div>
 
-      <section className="border-border bg-card mt-6 flex-1 rounded-lg border p-6 md:p-9">
-        <h1 className="font-serif text-3xl">{headingFor(step)}</h1>
+      <section className="border-border bg-card mt-6 flex-1 rounded-[28px] border p-6 shadow-[0_1px_3px_rgba(0,0,0,.04)] md:p-10">
+        <h1 className="font-display text-3xl md:text-[2.5rem] md:leading-tight">
+          {headingFor(step)}
+        </h1>
         <p className="text-muted-foreground mt-2 mb-7 text-sm leading-6">
           {introFor(step)}
         </p>
@@ -246,7 +247,7 @@ export function OnboardingFlow({
         )}
 
         {error && (
-          <p className="mt-5 text-sm text-red-700" role="alert">
+          <p className="text-danger mt-5 text-sm" role="alert">
             {error}
           </p>
         )}
@@ -355,7 +356,7 @@ function Field({
           aria-invalid={error ? true : undefined}
         />
       )}
-      {error && <p className="text-xs text-red-700">{error}</p>}
+      {error && <p className="text-danger text-xs">{error}</p>}
     </div>
   );
 }

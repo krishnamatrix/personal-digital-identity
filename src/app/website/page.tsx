@@ -92,7 +92,9 @@ export default async function WebsitePage() {
     return (
       <WorkspaceShell>
         <section className="border-border bg-card max-w-2xl rounded-lg border p-6 md:p-8">
-          <h1 className="font-serif text-3xl">My Website</h1>
+          <h1 className="font-display text-3xl md:text-[2.5rem] md:leading-tight">
+            My Website
+          </h1>
           <p className="text-muted-foreground mt-3 text-sm leading-6">
             {needsAuth
               ? "Sign in to create and publish your website."

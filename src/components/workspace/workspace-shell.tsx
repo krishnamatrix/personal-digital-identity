@@ -14,6 +14,7 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { Button } from "@/components/ui/button";
@@ -90,23 +91,32 @@ export function WorkspaceShell({
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   return (
-    <div className="min-h-screen md:flex">
+    <div className="bg-sidebar min-h-screen md:flex">
       {open && (
         <button
           aria-label="Close navigation"
-          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          className="fixed inset-0 z-30 bg-black/30 backdrop-blur-[2px] md:hidden"
           onClick={() => setOpen(false)}
         />
       )}
+      {/* The sidebar shares the chrome colour; the active link is a curved tab
+          that joins the canvas panel to its right (see .nav-tab in globals.css). */}
       <aside
-        className={`bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-40 flex w-64 flex-col transition-transform md:sticky md:top-0 md:h-screen md:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-40 flex w-64 flex-col transition-transform md:sticky md:top-0 md:h-screen md:w-60 md:translate-x-0 lg:w-64 ${open ? "translate-x-0 shadow-2xl md:shadow-none" : "-translate-x-full"}`}
       >
-        <div className="flex h-16 items-center justify-between border-b border-white/10 px-6">
-          <span className="font-serif text-2xl tracking-tight">
-            folioone<span className="text-[#c88c68]">.</span>
+        <div className="flex h-[4.5rem] items-center justify-between gap-2 pr-4 pl-6">
+          <Link
+            href="/"
+            className="rounded-full"
+            onClick={() => setOpen(false)}
+          >
+            <BrandMark />
+          </Link>
+          <span className="border-success/30 bg-success-soft text-success hidden rounded-full border px-2 py-0.5 text-[9.5px] font-semibold tracking-[.14em] uppercase md:inline">
+            Private
           </span>
           <button
-            className="md:hidden"
+            className="hover:bg-card/70 rounded-full p-1.5 md:hidden"
             onClick={() => setOpen(false)}
             aria-label="Close menu"
           >
@@ -115,11 +125,11 @@ export function WorkspaceShell({
         </div>
         <nav
           aria-label="Workspace navigation"
-          className="flex-1 space-y-6 overflow-y-auto px-3 py-5"
+          className="flex-1 space-y-7 overflow-y-auto py-5 pr-3 pl-3 md:pr-0"
         >
           {groups.map((group) => (
             <section key={group.title}>
-              <h2 className="px-3 pb-2 text-[10px] font-semibold tracking-[.16em] text-white/45">
+              <h2 className="text-sidebar-muted px-4 pb-2 text-[10.5px] font-medium tracking-[.14em]">
                 {group.title}
               </h2>
               <ul className="space-y-1">
@@ -131,9 +141,12 @@ export function WorkspaceShell({
                         href={href}
                         onClick={() => setOpen(false)}
                         aria-current={active ? "page" : undefined}
-                        className={`flex items-center gap-3 rounded px-3 py-2 text-[13px] ${active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"}`}
+                        className={`nav-tab flex h-11 items-center gap-3 rounded-xl px-4 text-[13.5px] transition-colors md:rounded-l-2xl ${active ? "font-medium" : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-white/55 md:mr-3"}`}
                       >
-                        <Icon className="size-4" strokeWidth={1.7} />
+                        <Icon
+                          className={`size-[17px] ${active ? "" : "opacity-80"}`}
+                          strokeWidth={1.7}
+                        />
                         {label}
                       </Link>
                     </li>
@@ -143,72 +156,94 @@ export function WorkspaceShell({
             </section>
           ))}
         </nav>
-        <div className="border-t border-white/10 p-4">
-          <div className="flex items-center gap-3">
-            <Avatar>
-              <AvatarFallback className="bg-[#d9b9a3] text-[#302b27]">
+        <div className="p-3">
+          <div className="bg-card/70 flex items-center gap-3 rounded-2xl p-3">
+            <Avatar className="size-9">
+              <AvatarFallback className="bg-muted text-foreground text-xs font-medium">
                 {initials(viewer.name)}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <p className="text-sm font-medium">{viewer.name}</p>
-              <p className="text-xs text-white/50">Personal workspace</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{viewer.name}</p>
+              <p className="text-sidebar-muted text-xs">Personal workspace</p>
             </div>
           </div>
         </div>
       </aside>
-      <div className="min-w-0 flex-1">
-        <header className="border-border bg-background/95 sticky top-0 z-20 flex h-16 items-center justify-between border-b px-5 backdrop-blur-sm md:px-9">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              aria-label="Open navigation"
-              onClick={() => setOpen(true)}
-            >
-              <Menu className="size-5" />
-            </Button>
-            <span className="text-muted-foreground text-sm">
-              My workspace <span className="mx-2">/</span>
-              <span className="text-foreground">
-                {currentSection(pathname)}
+      <div className="min-w-0 flex-1 md:sticky md:top-0 md:h-screen md:py-3 md:pr-3">
+        <div className="bg-background flex min-h-screen flex-col md:h-full md:min-h-0 md:overflow-y-auto md:rounded-[28px]">
+          <header className="border-border bg-card/85 sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b px-5 backdrop-blur-md md:h-[4.5rem] md:px-10">
+            <div className="flex min-w-0 items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                aria-label="Open navigation"
+                onClick={() => setOpen(true)}
+              >
+                <Menu className="size-5" />
+              </Button>
+              <span className="text-muted-foreground truncate text-sm">
+                <span className="hidden sm:inline">
+                  My workspace
+                  <span className="text-border mx-2.5">/</span>
+                </span>
+                <span className="text-foreground font-medium">
+                  {currentSection(pathname)}
+                </span>
               </span>
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2 px-2">
-                  <Avatar className="size-8">
-                    <AvatarFallback className="bg-[#d9b9a3] text-[#302b27]">
-                      {initials(viewer.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden text-sm sm:inline">
-                    {viewer.name}
-                  </span>
-                  <ChevronDown className="text-muted-foreground size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href="/profile">Profile</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/website">My Website</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/personas">Personas</Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <LogoutButton />
-          </div>
-        </header>
-        <main className="mx-auto max-w-7xl px-5 py-8 md:px-9 md:py-10">
-          {children}
-        </main>
+            </div>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2 pr-3 pl-1.5">
+                    <Avatar className="size-8">
+                      <AvatarFallback className="bg-muted text-foreground text-xs font-medium ring-1 ring-black/5">
+                        {initials(viewer.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden text-sm sm:inline">
+                      {viewer.name}
+                    </span>
+                    <ChevronDown className="text-muted-foreground size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/website">My Website</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/personas">Personas</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <LogoutButton />
+            </div>
+          </header>
+          <main className="mx-auto w-full max-w-7xl flex-1 px-5 py-8 md:px-10 md:py-12">
+            {children}
+          </main>
+          <footer className="border-border text-muted-foreground flex shrink-0 flex-wrap items-center justify-between gap-3 border-t px-5 py-4 text-[13px] md:px-10">
+            <p className="flex items-center gap-2">
+              <span
+                aria-hidden="true"
+                className="bg-success size-2 rounded-full"
+              />
+              Private by default — only you can see this workspace
+            </p>
+            <p className="flex gap-6">
+              <Link href="/profile" className="hover:text-foreground">
+                Master Identity
+              </Link>
+              <Link href="/website" className="hover:text-foreground">
+                Publishing
+              </Link>
+            </p>
+          </footer>
+        </div>
       </div>
     </div>
   );

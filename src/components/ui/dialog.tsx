@@ -12,15 +12,15 @@ export function DialogContent({
 }: ComponentProps<typeof DialogPrimitive.Content>) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/35" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/25 backdrop-blur-[2px]" />
       <DialogPrimitive.Content
-        className="border-border bg-card fixed top-1/2 left-1/2 z-50 w-[min(92vw,32rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border p-6 shadow-xl"
+        className="border-border bg-card fixed top-1/2 left-1/2 z-50 w-[min(92vw,32rem)] -translate-x-1/2 -translate-y-1/2 rounded-[24px] border p-7 shadow-2xl"
         {...props}
       >
         {children}
         <DialogPrimitive.Close
           aria-label="Close"
-          className="focus-visible:ring-accent absolute top-4 right-4 rounded focus-visible:ring-2 focus-visible:outline-none"
+          className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-foreground/20 absolute top-5 right-5 rounded-full p-1 focus-visible:ring-2 focus-visible:outline-none"
         >
           <X className="size-4" />
         </DialogPrimitive.Close>

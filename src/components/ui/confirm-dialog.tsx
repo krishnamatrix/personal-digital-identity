@@ -55,7 +55,7 @@ export function ConfirmDialog({
           }
         }}
       >
-        <DialogTitle className="pr-6 font-serif text-xl">{title}</DialogTitle>
+        <DialogTitle className="font-display pr-6 text-xl">{title}</DialogTitle>
         <DialogDescription asChild>
           <div className="text-muted-foreground mt-2 text-sm leading-6">
             {description}

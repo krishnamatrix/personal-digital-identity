@@ -24,7 +24,9 @@ export default async function ArticleEditorPage({
     return (
       <WorkspaceShell>
         <section className="border-border bg-card max-w-2xl rounded-lg border p-6 md:p-8">
-          <h1 className="font-serif text-3xl">Articles &amp; Thoughts</h1>
+          <h1 className="font-display text-3xl md:text-[2.5rem] md:leading-tight">
+            Articles &amp; Thoughts
+          </h1>
           <p className="text-muted-foreground mt-3 text-sm leading-6">
             {needsAuth
               ? "Sign in to write and manage your articles."

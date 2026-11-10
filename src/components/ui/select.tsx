@@ -13,7 +13,7 @@ export function SelectTrigger({
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        "border-border bg-card flex h-10 w-full items-center justify-between rounded-md border px-3 text-sm",
+        "border-border bg-card flex h-11 w-full items-center justify-between rounded-md border px-3.5 text-sm",
         className,
       )}
       {...props}
@@ -32,7 +32,7 @@ export function SelectContent(
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
-        className="border-border bg-card z-50 rounded-md border p-1 shadow-lg"
+        className="border-border bg-card z-50 rounded-2xl border p-1.5 shadow-xl"
         position="popper"
         {...props}
       />
@@ -46,7 +46,7 @@ export function SelectItem({
   return (
     <SelectPrimitive.Item
       className={cn(
-        "focus:bg-muted cursor-pointer rounded px-3 py-2 text-sm outline-none",
+        "focus:bg-muted cursor-pointer rounded-lg px-3 py-2 text-sm outline-none",
         className,
       )}
       {...props}

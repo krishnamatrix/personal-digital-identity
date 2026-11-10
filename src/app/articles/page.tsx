@@ -52,7 +52,9 @@ export default async function ArticlesPage({
     return (
       <WorkspaceShell>
         <section className="border-border bg-card max-w-2xl rounded-lg border p-6 md:p-8">
-          <h1 className="font-serif text-3xl">Articles &amp; Thoughts</h1>
+          <h1 className="font-display text-3xl md:text-[2.5rem] md:leading-tight">
+            Articles &amp; Thoughts
+          </h1>
           <p className="text-muted-foreground mt-3 text-sm leading-6">
             {needsAuth
               ? "Sign in to write and manage your articles."
@@ -93,7 +95,7 @@ export default async function ArticlesPage({
       <div className="mx-auto max-w-5xl">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-xl">
-            <h1 className="font-serif text-3xl md:text-4xl">
+            <h1 className="font-display text-3xl md:text-[2.5rem] md:leading-tight">
               Articles &amp; Thoughts
             </h1>
             <p className="text-muted-foreground mt-2 text-sm leading-6">
@@ -135,7 +137,7 @@ export default async function ArticlesPage({
               defaultValue={params.search}
               aria-label="Search articles"
               placeholder="Search title and content"
-              className="border-border bg-card focus-visible:ring-accent h-10 w-full rounded-md border pr-3 pl-9 text-sm outline-none focus-visible:ring-2"
+              className="border-border bg-card focus-visible:ring-foreground/15 h-10 w-full rounded-md border pr-3 pl-9 text-sm outline-none focus-visible:ring-2"
             />
           </div>
           {params.filter !== "all" && (
@@ -194,7 +196,7 @@ export default async function ArticlesPage({
             />
             {filtering ? (
               <>
-                <h2 className="mt-3 font-serif text-xl">
+                <h2 className="font-display mt-3 text-xl">
                   No matching articles
                 </h2>
                 <p className="text-muted-foreground mt-1 text-sm">
@@ -209,7 +211,7 @@ export default async function ArticlesPage({
               </>
             ) : (
               <>
-                <h2 className="mt-3 font-serif text-xl">
+                <h2 className="font-display mt-3 text-xl">
                   Write your first article
                 </h2>
                 <p className="text-muted-foreground mx-auto mt-1 max-w-sm text-sm leading-6">
@@ -246,7 +248,7 @@ export default async function ArticlesPage({
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="truncate font-serif text-xl group-hover:underline">
+                      <h2 className="font-display truncate text-xl group-hover:underline">
                         {a.title || "Untitled"}
                       </h2>
                       <span

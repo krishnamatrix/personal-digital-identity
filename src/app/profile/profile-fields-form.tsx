@@ -95,7 +95,7 @@ export function ProfileFieldsForm({
           <p
             role={status.ok ? "status" : "alert"}
             className={
-              status.ok ? "text-sm text-green-800" : "text-sm text-red-700"
+              status.ok ? "text-sm text-green-800" : "text-danger text-sm"
             }
           >
             {status.text}

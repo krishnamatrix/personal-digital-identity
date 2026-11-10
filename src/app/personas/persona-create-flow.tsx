@@ -277,10 +277,10 @@ export function PersonaCreateFlow({
     <div className="space-y-7" data-testid="persona-create-flow">
       <LiveRegions announcements={announcements} />
       <div>
-        <p className="text-accent mb-2 text-xs font-semibold tracking-[.16em] uppercase">
-          My Personas
-        </p>
-        <h1 className="font-serif text-4xl tracking-tight">Create Persona</h1>
+        <p className="eyebrow mb-2">My Personas</p>
+        <h1 className="font-display text-3xl md:text-[2.5rem] md:leading-tight">
+          Create Persona
+        </h1>
         <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-6">
           Nothing is saved until the final step. Creating a Persona does not
           change My Identity and does not publish anything.
@@ -310,7 +310,7 @@ export function PersonaCreateFlow({
           id="create-step-heading"
           ref={headingRef}
           tabIndex={-1}
-          className="font-serif text-2xl outline-none"
+          className="font-display text-2xl outline-none"
         >
           {STEPS[step]}
         </h2>

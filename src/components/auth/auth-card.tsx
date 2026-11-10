@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/brand-mark";
 import type { ReactNode } from "react";
 
 export function AuthCard({
@@ -13,20 +14,24 @@ export function AuthCard({
   children: ReactNode;
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center px-5 py-12">
-      <section className="border-border bg-card w-full max-w-md rounded-lg border p-7 md:p-9">
-        <Link href="/" className="font-serif text-2xl tracking-tight">
-          folioone<span className="text-[#c88c68]">.</span>
+    <main className="bg-sidebar flex min-h-screen flex-col items-center justify-center px-4 py-12">
+      <section className="border-border bg-card w-full max-w-md rounded-[28px] border p-7 shadow-[0_1px_3px_rgba(0,0,0,.04),0_12px_40px_-12px_rgba(0,0,0,.12)] md:p-10">
+        <Link href="/" className="rounded-full">
+          <BrandMark />
         </Link>
-        <p className="text-accent mt-10 text-xs font-semibold tracking-[.14em] uppercase">
-          {eyebrow}
-        </p>
-        <h1 className="mt-2 font-serif text-3xl">{title}</h1>
+        <p className="eyebrow mt-10">{eyebrow}</p>
+        <h1 className="font-display mt-2 text-3xl md:text-[2.5rem] md:leading-tight">
+          {title}
+        </h1>
         <p className="text-muted-foreground mt-2 mb-7 text-sm leading-6">
           {description}
         </p>
         {children}
       </section>
+      <p className="text-muted-foreground mt-6 flex items-center gap-2 text-[13px]">
+        <span aria-hidden="true" className="bg-success size-2 rounded-full" />
+        Private by default — nothing is shared until you choose
+      </p>
     </main>
   );
 }
@@ -51,11 +56,11 @@ export function FormField({
         name={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : undefined}
-        className="border-border bg-card placeholder:text-muted-foreground focus-visible:ring-accent h-10 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-2"
+        className="border-border bg-card placeholder:text-muted-foreground focus-visible:ring-foreground/15 focus-visible:border-foreground/30 h-11 w-full rounded-md border px-3.5 text-sm outline-none focus-visible:ring-2"
         {...props}
       />
       {error && (
-        <p id={`${id}-error`} className="text-xs text-red-700">
+        <p id={`${id}-error`} className="text-danger text-xs">
           {error}
         </p>
       )}

@@ -10,7 +10,7 @@ export function DropdownMenuContent({
     <Menu.Portal>
       <Menu.Content
         sideOffset={6}
-        className={`border-border bg-card z-50 min-w-40 rounded-md border p-1 shadow-lg ${className}`}
+        className={`border-border bg-card z-50 min-w-44 rounded-2xl border p-1.5 shadow-xl ${className}`}
         {...props}
       />
     </Menu.Portal>
@@ -22,7 +22,7 @@ export function DropdownMenuItem({
 }: ComponentProps<typeof Menu.Item>) {
   return (
     <Menu.Item
-      className={`focus:bg-muted cursor-pointer rounded px-3 py-2 text-sm outline-none ${className}`}
+      className={`focus:bg-muted cursor-pointer rounded-lg px-3 py-2 text-sm outline-none ${className}`}
       {...props}
     />
   );

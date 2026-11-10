@@ -72,10 +72,10 @@ export function PersonaList({ personas, counts, filter, storageKind }: Props) {
       <LiveRegions announcements={announcements} />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-accent mb-2 text-xs font-semibold tracking-[.16em] uppercase">
-            My Personas
-          </p>
-          <h1 className="font-serif text-4xl tracking-tight">Personas</h1>
+          <p className="eyebrow mb-2">My Personas</p>
+          <h1 className="font-display text-3xl md:text-[2.5rem] md:leading-tight">
+            Personas
+          </h1>
           <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-6">
             Each Persona presents selected parts of My Identity for a particular
             audience. Creating or editing one never changes My Identity and
@@ -161,7 +161,7 @@ export function PersonaList({ personas, counts, filter, storageKind }: Props) {
                 <div className="flex items-start gap-4">
                   <div
                     aria-hidden="true"
-                    className="bg-accent-soft text-accent flex size-11 shrink-0 items-center justify-center rounded-full font-serif text-sm"
+                    className="bg-accent-soft text-accent font-display flex size-11 shrink-0 items-center justify-center rounded-full text-sm"
                   >
                     {initialsOf(persona.name)}
                   </div>
@@ -169,7 +169,7 @@ export function PersonaList({ personas, counts, filter, storageKind }: Props) {
                     <div className="flex flex-wrap items-center gap-2">
                       <h2
                         id={`persona-${persona.id}-name`}
-                        className="font-serif text-xl"
+                        className="font-display text-xl"
                       >
                         {persona.name}
                       </h2>
@@ -252,7 +252,7 @@ function EmptyState({
   if (hasAny) {
     return (
       <section className="border-border bg-card rounded-lg border p-8 text-center">
-        <h2 className="font-serif text-2xl">
+        <h2 className="font-display text-2xl">
           {filter === "archived" ? "No archived Personas" : "No Personas here"}
         </h2>
         <p className="text-muted-foreground mx-auto mt-2 max-w-md text-sm leading-6">
@@ -265,7 +265,7 @@ function EmptyState({
   }
   return (
     <section className="border-border bg-card rounded-lg border p-8 md:p-10">
-      <h2 className="font-serif text-2xl">Create your first Persona</h2>
+      <h2 className="font-display text-2xl">Create your first Persona</h2>
       <p className="text-muted-foreground mt-2 max-w-xl text-sm leading-6">
         A Persona chooses which parts of My Identity to emphasise for one
         audience. Creating a Persona does not change My Identity and does not

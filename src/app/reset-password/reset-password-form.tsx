@@ -34,7 +34,7 @@ export function ResetPasswordForm() {
         required
       />
       {state.error && (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-danger text-sm" role="alert">
           {state.error}{" "}
           {state.error.includes("expired") && (
             <Link href="/forgot-password" className="underline">

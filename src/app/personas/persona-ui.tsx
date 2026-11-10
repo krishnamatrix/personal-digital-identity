@@ -35,7 +35,7 @@ export function StorageNotice({ kind }: { kind: string }) {
   return (
     <aside
       aria-label="Data storage notice"
-      className="flex items-start gap-3 rounded-lg border border-[#e3d2c5] bg-[#f4ece5] p-4"
+      className="border-border bg-card flex items-start gap-3 rounded-lg border p-4"
     >
       <Info className="text-accent mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <p className="text-muted-foreground text-sm leading-6">

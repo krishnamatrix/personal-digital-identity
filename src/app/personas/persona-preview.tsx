@@ -93,7 +93,7 @@ export function PersonaPreview({
         <p
           key={notice}
           role="note"
-          className="rounded-lg border border-[#e3d2c5] bg-[#f4ece5] p-3 text-sm leading-6"
+          className="border-border bg-card rounded-lg border p-3 text-sm leading-6"
         >
           {notice}
         </p>
@@ -105,9 +105,7 @@ export function PersonaPreview({
           data-frame={frame}
           className={`border-border bg-card mx-auto rounded-lg border p-6 md:p-8 ${frame === "mobile" ? "max-w-xs" : "max-w-3xl"}`}
         >
-          <p className="text-accent text-xs font-semibold tracking-[.14em] uppercase">
-            {personaName}
-          </p>
+          <p className="eyebrow">{personaName}</p>
           {(audience || purpose) && (
             <p className="text-muted-foreground mt-1 text-xs">
               {[audience, purpose].filter(Boolean).join(" · ")}
@@ -121,7 +119,7 @@ export function PersonaPreview({
             <div className="mt-6 space-y-8">
               {visible.map((section) => (
                 <section key={section.sectionKey} aria-label={section.label}>
-                  <h3 className="border-border border-b pb-2 font-serif text-xl">
+                  <h3 className="border-border font-display border-b pb-2 text-xl">
                     {section.label}
                   </h3>
                   {section.sectionKey === "profile" ? (
@@ -188,7 +186,7 @@ function PreviewField({
   const value =
     field.value !== null ? (
       field.fieldKey === "display_name" ? (
-        <p className="font-serif text-3xl">{field.value}</p>
+        <p className="font-display text-3xl">{field.value}</p>
       ) : field.fieldKey === "headline" ? (
         <p className="text-lg">{field.value}</p>
       ) : (
@@ -208,9 +206,7 @@ function PreviewField({
       data-highlighted={field.isHighlighted || undefined}
       className={field.isHighlighted ? "border-accent border-l-2 pl-4" : ""}
     >
-      <p className="text-muted-foreground mb-1 text-[11px] font-semibold tracking-[.12em] uppercase">
-        {field.label}
-      </p>
+      <p className="eyebrow mb-1">{field.label}</p>
       {value}
       {showProvenance && (
         <div className="mt-2">

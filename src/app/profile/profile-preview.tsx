@@ -58,9 +58,7 @@ function Section({
 }) {
   return (
     <section className="space-y-3">
-      <h3 className="text-accent text-xs font-semibold tracking-[.14em] uppercase">
-        {title}
-      </h3>
+      <h3 className="eyebrow">{title}</h3>
       {children}
     </section>
   );
@@ -128,13 +126,13 @@ export function ProfilePreview({
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <span className="text-muted-foreground flex h-full items-center justify-center font-serif text-3xl">
+              <span className="text-muted-foreground font-display flex h-full items-center justify-center text-3xl">
                 {(name ?? "?").slice(0, 1).toUpperCase()}
               </span>
             )}
           </div>
           <div className="min-w-0">
-            <h2 className="font-serif text-3xl">{name ?? "Your name"}</h2>
+            <h2 className="font-display text-3xl">{name ?? "Your name"}</h2>
             {profile.headline && (
               <p className="text-muted-foreground mt-1">{profile.headline}</p>
             )}

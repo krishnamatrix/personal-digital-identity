@@ -448,11 +448,11 @@ export function PersonaEditor({
 
       <header className="border-border bg-card space-y-4 rounded-lg border p-6 md:p-8">
         <div>
-          <p className="text-accent text-xs font-semibold tracking-[.14em] uppercase">
-            Persona
-          </p>
+          <p className="eyebrow">Persona</p>
           <div className="mt-2 flex flex-wrap items-center gap-3">
-            <h1 className="font-serif text-3xl">{persona.name}</h1>
+            <h1 className="font-display text-3xl md:text-[2.5rem] md:leading-tight">
+              {persona.name}
+            </h1>
             {persona.isDefault && <Badge>Default</Badge>}
             {readOnly && (
               <Badge className="bg-muted text-muted-foreground">Archived</Badge>
@@ -482,7 +482,7 @@ export function PersonaEditor({
       {readOnly && (
         <p
           role="note"
-          className="rounded-lg border border-[#e3d2c5] bg-[#f4ece5] p-4 text-sm leading-6"
+          className="border-border bg-card rounded-lg border p-4 text-sm leading-6"
         >
           This Persona is archived and read-only. Restore it to make changes. It
           cannot be your default or be used for anything else while archived.
@@ -548,7 +548,7 @@ export function PersonaEditor({
 
         <TabsContent value="details" className="mt-6">
           <section className="border-border bg-card space-y-5 rounded-lg border p-6 md:p-8">
-            <h2 className="font-serif text-2xl">Details</h2>
+            <h2 className="font-display text-2xl">Details</h2>
             <FieldRow
               id="detail-name"
               label="Name"
@@ -610,7 +610,7 @@ export function PersonaEditor({
         <TabsContent value="content" className="mt-6 space-y-6">
           <section className="border-border bg-card space-y-4 rounded-lg border p-6 md:p-8">
             <div>
-              <h2 className="font-serif text-2xl">Sections</h2>
+              <h2 className="font-display text-2xl">Sections</h2>
               <p className="text-muted-foreground mt-1 text-sm leading-6">
                 Choose which sections this Persona shows, their order and their
                 labels. Renaming a section never changes My Identity.
@@ -713,7 +713,7 @@ export function PersonaEditor({
 
           <section className="border-border bg-card space-y-4 rounded-lg border p-6 md:p-8">
             <div>
-              <h2 className="font-serif text-2xl">Profile fields</h2>
+              <h2 className="font-display text-2xl">Profile fields</h2>
               <p className="text-muted-foreground mt-1 text-sm leading-6">
                 Include, order and highlight the My Identity fields this Persona
                 uses. New information stays excluded until you choose it.
@@ -830,7 +830,7 @@ export function PersonaEditor({
         <TabsContent value="presentation" className="mt-6">
           <section className="border-border bg-card space-y-6 rounded-lg border p-6 md:p-8">
             <div>
-              <h2 className="font-serif text-2xl">Presentation</h2>
+              <h2 className="font-display text-2xl">Presentation</h2>
               <p className="text-muted-foreground mt-1 text-sm leading-6">
                 For each included field, keep your My Identity wording or write
                 a version just for this Persona. Choosing “Use My Identity
@@ -944,7 +944,7 @@ export function PersonaEditor({
 
         <TabsContent value="preview" className="mt-6">
           <section className="border-border bg-card space-y-4 rounded-lg border p-6 md:p-8">
-            <h2 className="font-serif text-2xl">Preview</h2>
+            <h2 className="font-display text-2xl">Preview</h2>
             <PersonaPreview
               preview={preview}
               personaName={persona.name}

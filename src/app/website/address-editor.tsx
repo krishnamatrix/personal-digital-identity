@@ -108,7 +108,7 @@ export function AddressEditor({
       ? "text-green-800"
       : availability.state === "checking" || availability.state === "idle"
         ? "text-muted-foreground"
-        : "text-red-700";
+        : "text-danger";
 
   return (
     <div className="max-w-xl space-y-4">
@@ -159,7 +159,7 @@ export function AddressEditor({
           <p
             role={message.ok ? "status" : "alert"}
             className={
-              message.ok ? "text-sm text-green-800" : "text-sm text-red-700"
+              message.ok ? "text-sm text-green-800" : "text-danger text-sm"
             }
           >
             {message.text}

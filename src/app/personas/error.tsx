@@ -22,10 +22,10 @@ export default function PersonasError({
         role="alert"
         className="border-border bg-card max-w-2xl rounded-lg border p-6 md:p-8"
       >
-        <p className="text-accent text-xs font-semibold tracking-[.14em] uppercase">
-          My Personas
-        </p>
-        <h1 className="mt-2 font-serif text-3xl">Something went wrong</h1>
+        <p className="eyebrow">My Personas</p>
+        <h1 className="font-display mt-2 text-3xl md:text-[2.5rem] md:leading-tight">
+          Something went wrong
+        </h1>
         <p className="text-muted-foreground mt-3 text-sm leading-6">
           We could not show this page. Nothing was changed. Try again, or go
           back to your Personas.

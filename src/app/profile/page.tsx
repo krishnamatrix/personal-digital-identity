@@ -85,10 +85,10 @@ export default async function ProfilePage({
     return (
       <WorkspaceShell>
         <section className="border-border bg-card max-w-2xl rounded-lg border p-6 md:p-8">
-          <p className="text-accent text-xs font-semibold tracking-[.14em] uppercase">
-            Canonical identity
-          </p>
-          <h1 className="mt-2 font-serif text-3xl">Your profile</h1>
+          <p className="eyebrow">Canonical identity</p>
+          <h1 className="font-display mt-2 text-3xl md:text-[2.5rem] md:leading-tight">
+            Your profile
+          </h1>
           <p className="text-muted-foreground mt-3 text-sm leading-6">
             {needsAuthentication
               ? "Sign in with your Folioone account to manage your private identity profile."

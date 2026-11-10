@@ -13,10 +13,10 @@ export default function PersonaNotFound() {
   return (
     <WorkspaceShell>
       <section className="border-border bg-card max-w-2xl rounded-lg border p-6 md:p-8">
-        <p className="text-accent text-xs font-semibold tracking-[.14em] uppercase">
-          My Personas
-        </p>
-        <h1 className="mt-2 font-serif text-3xl">Persona not found</h1>
+        <p className="eyebrow">My Personas</p>
+        <h1 className="font-display mt-2 text-3xl md:text-[2.5rem] md:leading-tight">
+          Persona not found
+        </h1>
         <p className="text-muted-foreground mt-3 text-sm leading-6">
           This Persona does not exist or is not available to you. It may have
           been deleted. Your other Personas and My Identity are unaffected.
