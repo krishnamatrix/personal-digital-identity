@@ -1,4 +1,5 @@
-import type { FolioneClient } from "@/lib/db-schema";
+import "server-only";
+import type { FolioneClient } from "@/lib/db/schema";
 import { AuthorizationError } from "@/lib/supabase/server";
 import {
   profileSchema,
@@ -7,7 +8,7 @@ import {
 } from "@/domains/identity/profile-schema";
 
 const PROFILE_COLUMNS =
-  "account_id,display_name,headline,summary,location,website_url,linkedin_url,github_url,created_at,updated_at";
+  "account_id,display_name,full_name,headline,summary,location,website_url,linkedin_url,github_url,profile_image_url,cover_image_url,contact_email,phone,current_designation,current_organization,industry,professional_summary,primary_purpose,onboarding_step,onboarding_completed_at,created_at,updated_at";
 
 type QueryClient = FolioneClient;
 
@@ -111,12 +112,26 @@ function parseProfile(data: Record<string, unknown>): IdentityProfile {
   return profileSchema.parse({
     accountId: data.account_id,
     displayName: data.display_name,
+    fullName: data.full_name,
     headline: data.headline,
     summary: data.summary,
     location: data.location,
     websiteUrl: data.website_url,
     linkedinUrl: data.linkedin_url,
     githubUrl: data.github_url,
+    profileImageUrl: data.profile_image_url,
+    coverImageUrl: data.cover_image_url,
+    contactEmail: data.contact_email,
+    phone: data.phone,
+    currentDesignation: data.current_designation,
+    currentOrganization: data.current_organization,
+    industry: data.industry,
+    professionalSummary: data.professional_summary,
+    primaryPurpose: data.primary_purpose,
+    onboardingStep: data.onboarding_step,
+    onboardingCompletedAt: data.onboarding_completed_at
+      ? new Date(String(data.onboarding_completed_at))
+      : null,
     createdAt: new Date(String(data.created_at)),
     updatedAt: new Date(String(data.updated_at)),
   });

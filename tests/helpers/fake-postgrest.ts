@@ -1,7 +1,7 @@
 import type {
   PersonaDbClient,
   PersonaDbSession,
-} from "@/domains/personas/persona-supabase-repository";
+} from "@/lib/db/queries/personas";
 
 export type FakeCall =
   | {

@@ -1,7 +1,7 @@
 import { loadEnvConfig } from "@next/env";
 import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { SupabasePersonaRepository } from "@/domains/personas/persona-supabase-repository";
+import { SupabasePersonaRepository } from "@/lib/db/queries/personas";
 import {
   describePersonaRepositoryContract,
   type ContractWorld,
@@ -11,7 +11,7 @@ import {
   STARTER_SECTIONS,
 } from "@/domains/personas/persona-constants";
 import type { NormalizedPersonaCreate } from "@/domains/personas/persona-types";
-import { folioneDbOptions, type FolioneClient } from "../../src/lib/db-schema";
+import { folioneDbOptions, type FolioneClient } from "../../src/lib/db/schema";
 
 /**
  * HOSTED PERSONA PERSISTENCE SUITE (M3C). AUTHORED, NOT EXECUTED.

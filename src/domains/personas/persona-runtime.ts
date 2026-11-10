@@ -1,11 +1,11 @@
 import "server-only";
-import { findProfile } from "@/domains/identity/profile-repository";
+import { getAuthenticatedDb } from "@/lib/db/query";
+import { findProfile } from "@/lib/db/query";
 import { InMemoryPersonaRepository } from "@/domains/personas/persona-memory-repository";
 import type { PersonaRepository } from "@/domains/personas/persona-repository";
 import { createPersonaService } from "@/domains/personas/persona-service";
-import { SupabasePersonaRepository } from "@/domains/personas/persona-supabase-repository";
+import { SupabasePersonaRepository } from "@/lib/db/query";
 import { env } from "@/lib/env";
-import { createAuthenticatedClient } from "@/lib/supabase/server";
 
 /**
  * Production wiring for Personas. The storage backend is chosen by the
@@ -38,8 +38,8 @@ function sharedFixture() {
 export function getPersonaService() {
   // One verified session per service instance, shared by the repository and the
   // context, so a request authenticates once (auth.getUser() is a network call).
-  let pending: ReturnType<typeof createAuthenticatedClient> | undefined;
-  const session = () => (pending ??= createAuthenticatedClient());
+  let pending: ReturnType<typeof getAuthenticatedDb> | undefined;
+  const session = () => (pending ??= getAuthenticatedDb());
 
   const repository: PersonaRepository =
     env.PERSONA_STORAGE === "supabase"

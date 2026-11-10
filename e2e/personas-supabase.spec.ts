@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
-import { folioneDbOptions, type FolioneClient } from "../src/lib/db-schema";
+import { folioneDbOptions, type FolioneClient } from "../src/lib/db/schema";
 
 // Persona acceptance against the REAL database (M3D). Run only through
 // playwright.supabase.config.ts (PERSONA_STORAGE=supabase). The workflow itself is

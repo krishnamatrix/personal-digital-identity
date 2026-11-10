@@ -1,7 +1,7 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
-import { folioneDbOptions } from "@/lib/db-schema";
+import { folioneDbOptions } from "@/lib/db/schema";
 import { requireSupabaseConfig } from "@/lib/env";
 
 export function createClient() {

@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { folioneDbOptions } from "@/lib/db-schema";
+import { folioneDbOptions } from "@/lib/db/schema";
 import { env } from "@/lib/env";
 
 export async function middleware(request: NextRequest) {
@@ -39,5 +39,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/profile/:path*", "/personas/:path*"],
+  matcher: [
+    "/profile/:path*",
+    "/personas/:path*",
+    "/onboarding/:path*",
+    "/website/:path*",
+    "/articles/:path*",
+    "/reset-password",
+  ],
 };

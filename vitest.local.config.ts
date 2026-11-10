@@ -19,6 +19,7 @@ export default defineConfig({
       "tests/hosted/persona-persistence.hosted.ts",
       "tests/hosted/persona-anchor-absent.hosted.ts",
       "tests/hosted/persona-anchor-concurrent.hosted.ts",
+      "tests/hosted/articles-snapshot.hosted.ts",
     ],
     hookTimeout: 60_000,
     testTimeout: 90_000,

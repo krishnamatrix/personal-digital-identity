@@ -23,7 +23,10 @@ describe("WorkspaceShell navigation", () => {
     expect(links.map((l) => [l.textContent, l.getAttribute("href")])).toEqual([
       ["Overview", "/"],
       ["Profile", "/profile"],
+      ["Articles & Thoughts", "/articles"],
+      ["My Website", "/website"],
       ["Personas", "/personas"],
+      ["Social & Web Profiles", "/profile?section=social"],
     ]);
     expect(links.every((l) => l.getAttribute("href") !== "#")).toBe(true);
   });

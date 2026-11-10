@@ -1,22 +1,39 @@
-import Link from "next/link";
+import { AuthCard } from "@/components/auth/auth-card";
 import { LoginForm } from "@/app/login/login-form";
 
-export default function LoginPage() {
+const NOTICES: Record<string, { tone: "ok" | "error"; text: string }> = {
+  password_updated: {
+    tone: "ok",
+    text: "Your password was updated. Sign in with the new password.",
+  },
+  link_invalid: {
+    tone: "error",
+    text: "That confirmation link is invalid or has expired. Sign in, or create the account again.",
+  },
+};
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ message?: string; error?: string }>;
+}) {
+  const { message, error } = await searchParams;
+  const notice = NOTICES[message ?? error ?? ""];
   return (
-    <main className="flex min-h-screen items-center justify-center px-5 py-12">
-      <section className="border-border bg-card w-full max-w-md rounded-lg border p-7 md:p-9">
-        <Link href="/" className="font-serif text-2xl tracking-tight">
-          folioone<span className="text-[#c88c68]">.</span>
-        </Link>
-        <p className="text-accent mt-10 text-xs font-semibold tracking-[.14em] uppercase">
-          Your private workspace
+    <AuthCard
+      eyebrow="Your private workspace"
+      title="Welcome back"
+      description="Sign in to continue shaping your identity."
+    >
+      {notice && (
+        <p
+          className={`mb-5 rounded-md border px-3 py-2 text-sm ${notice.tone === "ok" ? "border-green-200 bg-green-50 text-green-900" : "border-red-200 bg-red-50 text-red-800"}`}
+          role={notice.tone === "ok" ? "status" : "alert"}
+        >
+          {notice.text}
         </p>
-        <h1 className="mt-2 font-serif text-3xl">Welcome back</h1>
-        <p className="text-muted-foreground mt-2 mb-7 text-sm leading-6">
-          Sign in to continue shaping your identity.
-        </p>
-        <LoginForm />
-      </section>
-    </main>
+      )}
+      <LoginForm />
+    </AuthCard>
   );
 }

@@ -249,8 +249,11 @@ describe("application uses the folioone schema everywhere", () => {
   });
 
   it("the schema name is defined once", () => {
-    const definitions = sources.filter((f) => /"folioone"/.test(read(f)));
-    expect(definitions).toEqual(["src/lib/db-schema.ts"]);
+    // slug.ts lists "folioone" only as a reserved public-website address, not as a schema.
+    const definitions = sources.filter(
+      (f) => f !== "src/domains/website/slug.ts" && /"folioone"/.test(read(f)),
+    );
+    expect(definitions).toEqual(["src/lib/db/schema.ts"]);
   });
 
   it("uses no service-role key anywhere", () => {

@@ -1,7 +1,7 @@
 import { loadEnvConfig } from "@next/env";
 import { createClient, type User } from "@supabase/supabase-js";
 import { afterAll, describe, expect, it, type TestContext } from "vitest";
-import { folioneDbOptions, type FolioneClient } from "../../src/lib/db-schema";
+import { folioneDbOptions, type FolioneClient } from "../../src/lib/db/schema";
 
 const ORIGINAL_ENVIRONMENT = { ...process.env };
 const mutableEnvironment = process.env as Record<string, string | undefined>;

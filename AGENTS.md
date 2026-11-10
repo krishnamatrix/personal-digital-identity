@@ -33,6 +33,12 @@ Prettier and ESLint are configured; run `pnpm format:check` and `pnpm lint`. Use
 
 Add tests with new behavior. Name them after the module (for example, `identity-profile-service.test.ts`). `pnpm test` must stay green before finishing work.
 
+## Database access rule
+
+All Supabase database operations (`.from()`, `.rpc()`) live in `src/lib/db/` only, with explicit column lists (never `select('*')`).
+Pages, components, actions, route handlers and middleware must not query; services call `@/lib/db/query`. Client components must never
+import the database layer. `pnpm check:db-boundary` (part of `pnpm validate`) enforces this. See `docs/architecture/database-access-layer.md`.
+
 ## Commits and Pull Requests
 
 Concise, imperative commit subjects (for example, `Add profile validation`). PRs summarize the change and design choices, link issues, include screenshots for visual changes, and list tests run and follow-ups.

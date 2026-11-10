@@ -10,7 +10,7 @@ import {
   PERSONA_READ_RPC,
   PERSONA_RPC,
   SupabasePersonaRepository,
-} from "@/domains/personas/persona-supabase-repository";
+} from "@/lib/db/queries/personas";
 import { normalizedCreate } from "./helpers/persona-fixtures";
 import {
   OTHER,
@@ -673,14 +673,14 @@ describe("mutations are never retried", () => {
 
   it("the adapter and service contain no retry or backoff logic", () => {
     const sources = [
-      "persona-supabase-repository.ts",
-      "persona-service.ts",
-      "persona-db-errors.ts",
+      "src/lib/db/queries/personas.ts",
+      "src/domains/personas/persona-service.ts",
+      "src/domains/personas/persona-db-errors.ts",
     ].map((f) =>
-      readFileSync(
-        join(process.cwd(), "src/domains/personas", f),
-        "utf8",
-      ).replace(/\/\*[\s\S]*?\*\/|(^|[^:])\/\/.*$/gm, "$1"),
+      readFileSync(join(process.cwd(), f), "utf8").replace(
+        /\/\*[\s\S]*?\*\/|(^|[^:])\/\/.*$/gm,
+        "$1",
+      ),
     );
     for (const source of sources)
       expect(source).not.toMatch(

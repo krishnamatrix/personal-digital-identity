@@ -1,4 +1,5 @@
-import type { FolioneClient } from "@/lib/db-schema";
+import "server-only";
+import type { FolioneClient } from "@/lib/db/schema";
 import { z, ZodError } from "zod";
 import { PROFILE_FIELD_KEYS } from "@/domains/personas/persona-constants";
 import {

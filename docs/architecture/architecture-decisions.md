@@ -59,3 +59,21 @@
 - **Rationale:** One name removes per-environment SQL, code and test variants, and keeps application data out of `public`, which Supabase exposes by default and shares with other tooling.
 - **Consequences:** The schema name is a single constant (`FOLIOONE_SCHEMA`, `src/lib/db-schema.ts`) passed as `db.schema` to every Supabase client; repositories are typed against that client so a client without it does not compile. The approved design is unchanged (RLS enabled and forced, request-path gate, nine RPC contracts, PT409, account anchor, advisory and row locking, append-only revisions, SECURITY INVOKER with empty `search_path`). The hosted SQL is the generated package in `docs/sql/folioone-schema/`, executed manually by the developer; it never touches `public` or Auth users and copies no data. Existing development data in `public` is left in place and unused. See [database-schema-folioone.md](database-schema-folioone.md).
 - **Unresolved:** Hosted execution is pending the developer's manual run and catalog evidence. Retiring the legacy `public` objects is a separate, later decision.
+
+## AD-009: Centralized, server-only database access layer
+
+**Decision.** All Supabase database operations live in `src/lib/db/` (`client.ts`, `query.ts`, `schema.ts`, `queries/*`). Services call it;
+pages, components, actions, route handlers and middleware never query. Column lists are always explicit (no wildcard).
+**Why.** One obvious, auditable place for every query; public reads can be proven to touch only approved columns; the boundary is
+machine-checked (`pnpm check:db-boundary`, part of `pnpm validate`) rather than convention.
+**Unchanged.** RLS remains the authorization authority; the layer is an architectural boundary, not a replacement. No service-role
+credentials, direct connections or SECURITY DEFINER. Details: `database-access-layer.md`.
+
+## AD-010: Articles are canonical identity content published through the website snapshot
+
+**Decision.** Articles live in `folioone.articles` (owner-only). The public site renders only from `website_published_articles`,
+rows copied from `articles` inside `website_publish` in the same transaction as the page snapshot. Bodies are validated JSON
+rendered by our own renderer, not HTML. A trigger removes a snapshot row the moment its article stops being published.
+**Why.** One publishing architecture (M5), immediate revocation without request-time reads of private tables, no stored-XSS
+surface, and article ownership independent of URL slugs (so Personas can adopt articles later).
+**Details.** `m6-articles-and-thoughts.md`.

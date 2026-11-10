@@ -29,6 +29,12 @@ export async function loginAction(
   const { error } = await supabase.auth.signInWithPassword(credentials.data);
 
   if (error) {
+    if (error.code === "email_not_confirmed") {
+      return {
+        error:
+          "Confirm your email address first: open the link we sent when you signed up.",
+      };
+    }
     return { error: "We could not sign you in with those credentials." };
   }
 

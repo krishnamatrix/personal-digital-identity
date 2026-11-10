@@ -1,0 +1,192 @@
+import { z } from "zod";
+
+export const THEMES = [
+  {
+    id: "professional",
+    label: "Professional",
+    blurb:
+      "Editorial and restrained. A clear experience timeline for consultants, executives and founders.",
+  },
+  {
+    id: "creative",
+    label: "Creative",
+    blurb:
+      "Image-rich and expressive. Large type and visual project cards for designers, makers and developers.",
+  },
+  {
+    id: "minimal",
+    label: "Minimal",
+    blurb:
+      "Quiet and compact. Generous whitespace and strong typography for a simple identity page.",
+  },
+] as const;
+export type ThemeId = (typeof THEMES)[number]["id"];
+export const THEME_IDS = THEMES.map((t) => t.id) as [ThemeId, ...ThemeId[]];
+
+/** Website sections. `intro` is the hero and always comes first; the rest can be reordered. */
+export const SECTION_IDS = [
+  "intro",
+  "about",
+  "experience",
+  "education",
+  "skills",
+  "projects",
+  "articles",
+  "achievements",
+  "certifications",
+  "social",
+  "contact",
+] as const;
+export type SectionId = (typeof SECTION_IDS)[number];
+
+export const SECTION_DEFS: Record<
+  SectionId,
+  { label: string; defaultHeading: string; hint: string; reorderable: boolean }
+> = {
+  intro: {
+    label: "Introduction",
+    defaultHeading: "Introduction",
+    hint: "Name, images, headline, short biography, location.",
+    reorderable: false,
+  },
+  about: {
+    label: "About",
+    defaultHeading: "About",
+    hint: "Your full biography and professional summary.",
+    reorderable: true,
+  },
+  experience: {
+    label: "Professional experience",
+    defaultHeading: "Experience",
+    hint: "Employment history from My Identity.",
+    reorderable: true,
+  },
+  education: {
+    label: "Education",
+    defaultHeading: "Education",
+    hint: "Institutions, qualifications and dates.",
+    reorderable: true,
+  },
+  skills: {
+    label: "Skills and expertise",
+    defaultHeading: "Skills",
+    hint: "Skills grouped by category.",
+    reorderable: true,
+  },
+  projects: {
+    label: "Projects",
+    defaultHeading: "Projects",
+    hint: "Work with roles, technologies and links.",
+    reorderable: true,
+  },
+  articles: {
+    label: "Articles & thoughts",
+    defaultHeading: "Writing",
+    hint: "Published articles you choose to feature, in the order you set.",
+    reorderable: true,
+  },
+  achievements: {
+    label: "Achievements",
+    defaultHeading: "Achievements",
+    hint: "Awards, recognition and accomplishments.",
+    reorderable: true,
+  },
+  certifications: {
+    label: "Certifications",
+    defaultHeading: "Certifications",
+    hint: "Certifications with issuer, date and credential link.",
+    reorderable: true,
+  },
+  social: {
+    label: "Social and web presence",
+    defaultHeading: "Elsewhere",
+    hint: "Your saved social and web profiles.",
+    reorderable: true,
+  },
+  contact: {
+    label: "Contact",
+    defaultHeading: "Get in touch",
+    hint: "Only the contact details you choose below.",
+    reorderable: true,
+  },
+};
+
+const heading = z.string().trim().max(60).optional();
+
+export const websiteConfigSchema = z.object({
+  /** Order of ALL sections (intro is forced first when building). */
+  sections: z
+    .array(z.object({ id: z.enum(SECTION_IDS), visible: z.boolean(), heading }))
+    .max(SECTION_IDS.length),
+  /** Entries hidden from the website only (they stay in My Identity). */
+  excludedEntryIds: z.array(z.uuid()).max(500),
+  intro: z.object({
+    showImage: z.boolean(),
+    showCover: z.boolean(),
+    showLocation: z.boolean(),
+    showShortBio: z.boolean(),
+  }),
+  about: z.object({
+    showBiography: z.boolean(),
+    showProfessionalSummary: z.boolean(),
+  }),
+  /** Articles are opt-in one by one; the order here is the order on the website. */
+  articles: z.object({
+    selectedIds: z.array(z.uuid()).max(50),
+  }),
+  /** Private by default: nothing is published unless it is switched on here. */
+  contact: z.object({
+    showEmail: z.boolean(),
+    showPhone: z.boolean(),
+    showWebsite: z.boolean(),
+  }),
+  seo: z.object({
+    title: z.string().trim().max(120).optional(),
+    description: z.string().trim().max(300).optional(),
+  }),
+});
+export type WebsiteConfig = z.infer<typeof websiteConfigSchema>;
+
+export function defaultConfig(): WebsiteConfig {
+  return {
+    sections: SECTION_IDS.map((id) => ({ id, visible: id !== "articles" })),
+    articles: { selectedIds: [] },
+    excludedEntryIds: [],
+    intro: {
+      showImage: true,
+      showCover: true,
+      showLocation: true,
+      showShortBio: true,
+    },
+    about: { showBiography: true, showProfessionalSummary: true },
+    contact: { showEmail: false, showPhone: false, showWebsite: false },
+    seo: {},
+  };
+}
+
+/** Parses stored config, repairing it: unknown/missing sections are added, duplicates dropped, intro first. */
+export function normalizeConfig(raw: unknown): WebsiteConfig {
+  const base = defaultConfig();
+  const parsed = websiteConfigSchema.safeParse({
+    ...base,
+    ...(raw && typeof raw === "object" ? raw : {}),
+  });
+  const cfg = parsed.success ? parsed.data : base;
+  const seen = new Set<string>();
+  const ordered = cfg.sections.filter((s) =>
+    seen.has(s.id) ? false : (seen.add(s.id), true),
+  );
+  for (const id of SECTION_IDS)
+    if (!seen.has(id)) ordered.push({ id, visible: id !== "articles" });
+  const intro = ordered.find((s) => s.id === "intro")!;
+  return {
+    ...cfg,
+    sections: [intro, ...ordered.filter((s) => s.id !== "intro")],
+  };
+}
+
+export type WebsiteStatus =
+  | "not_created"
+  | "draft"
+  | "published"
+  | "unpublished";

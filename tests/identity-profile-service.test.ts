@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createAuthenticatedClient: mocks.createAuthenticatedClient,
 }));
 
-vi.mock("@/domains/identity/profile-repository", () => ({
+vi.mock("@/lib/db/queries/identity", () => ({
   ensureAccount: mocks.ensureAccount,
   findProfile: mocks.findProfile,
   createEmptyProfile: mocks.createEmptyProfile,

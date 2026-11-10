@@ -27,6 +27,12 @@ const SQL_PACKAGE = [
   "docs/sql/folioone-schema/004-persona-tables.sql",
   "docs/sql/folioone-schema/005-persona-rls-and-grants.sql",
   "docs/sql/folioone-schema/006-persona-functions.sql",
+  // M4: profile expansion + identity_entries (hand-written, folioone only; reviewed SQL).
+  "docs/sql/milestone-4/001-identity-profile-expansion.sql",
+  // M5: website configuration + published snapshot (adds a narrow anon read; see the file header).
+  "docs/sql/milestone-5/001-website.sql",
+  // M6: articles + published article snapshot (replaces the three website functions).
+  "docs/sql/milestone-6/001-articles.sql",
 ];
 
 /**
@@ -190,6 +196,10 @@ async function main() {
 
   await step("typecheck", () => must("pnpm", ["typecheck"]));
   await step("lint", () => must("pnpm", ["lint"]));
+  await step(
+    "database access boundary (src/lib/db only, no wildcard selects)",
+    () => must("pnpm", ["check:db-boundary"]),
+  );
   await step("format check", () => must("pnpm", ["format:check"]));
   await step("unit tests (fixture adapter, no database)", () =>
     must("pnpm", ["test"]),
@@ -324,22 +334,22 @@ async function main() {
     const sql = `
       WITH f AS (SELECT p.* FROM pg_proc p WHERE p.pronamespace = 'folioone'::regnamespace)
       SELECT
-        (SELECT count(*) FROM f) = 11,
+        (SELECT count(*) FROM f) = 18,
         (SELECT count(*) FROM f WHERE prosrc LIKE '%PT409%') = 7,
         (SELECT count(*) FROM f WHERE prosrc LIKE '%40001%') = 0,
         (SELECT count(*) FROM f WHERE prosecdef) = 0,
         (SELECT count(*) FROM f WHERE prosrc ~* '\\mpublic\\.') = 0,
         (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'folioone'::regnamespace AND c.relkind = 'r'
-           AND c.relname IN ('accounts','identity_profiles','personas','persona_sections','persona_profile_field_selections','persona_profile_overrides','persona_revisions')
-           AND c.relrowsecurity AND c.relforcerowsecurity) = 7,
-        (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'folioone'::regnamespace AND c.relkind = 'r') = 7,
-        (SELECT count(*) FROM pg_policies WHERE schemaname = 'folioone') = 21,
+           AND c.relname IN ('accounts','identity_profiles','identity_entries','website_sites','website_published','articles','website_published_articles','personas','persona_sections','persona_profile_field_selections','persona_profile_overrides','persona_revisions')
+           AND c.relrowsecurity AND c.relforcerowsecurity) = 12,
+        (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'folioone'::regnamespace AND c.relkind = 'r') = 12,
+        (SELECT count(*) FROM pg_policies WHERE schemaname = 'folioone') = 41,
         (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r'
            AND c.relname IN ('accounts','identity_profiles','personas','persona_sections','persona_profile_field_selections','persona_profile_overrides','persona_revisions')) = ${publicDecoy ? 7 : 0};`;
     const { code, out } = await psql(sql, ["-At", "-F", ","]);
     if (code !== 0 || out.trim().split("\n").pop() !== "t,t,t,t,t,t,t,t,t") {
       throw new Error(
-        `Unexpected local catalog shape (folioone: 11 functions, 7 PT409, 0 x 40001, 0 SECURITY DEFINER, no public. references, 7 forced-RLS tables, 21 policies; public app tables = ${publicDecoy ? 7 : 0}): ${out}`,
+        `Unexpected local catalog shape (folioone: 18 functions (11 + 3 website + 1 article trigger + 3 snapshot gate helpers), 7 PT409, 0 x 40001, 0 SECURITY DEFINER, no public. references, 12 forced-RLS tables (7 package + identity_entries + 2 website + 2 article), 41 policies (21 + 4 + 7 + 9); public app tables = ${publicDecoy ? 7 : 0}): ${out}`,
       );
     }
   });
@@ -455,6 +465,10 @@ async function main() {
   await step(
     "DB integration: Persona persistence, RPCs, lifecycle, versions, defaults",
     () => vitestLocal(["tests/hosted/persona-persistence.hosted.ts"], dbEnv()),
+  );
+  await step(
+    "DB integration: articles, ownership, versions and the published article snapshot",
+    () => vitestLocal(["tests/hosted/articles-snapshot.hosted.ts"], dbEnv()),
   );
   await step("DB integration: account anchor absent branch (fresh user)", () =>
     vitestLocal(

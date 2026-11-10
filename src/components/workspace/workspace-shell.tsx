@@ -5,8 +5,11 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   ChevronDown,
+  Globe,
   Home,
+  Link2,
   Menu,
+  PenLine,
   UserRound,
   UsersRound,
   X,
@@ -34,11 +37,20 @@ const groups = [
     links: [
       { label: "Overview", href: "/", icon: Home },
       { label: "Profile", href: "/profile", icon: UserRound },
+      { label: "Articles & Thoughts", href: "/articles", icon: PenLine },
     ],
   },
   {
-    title: "MY PERSONAS",
-    links: [{ label: "Personas", href: "/personas", icon: UsersRound }],
+    title: "MY PRESENCE",
+    links: [
+      { label: "My Website", href: "/website", icon: Globe },
+      { label: "Personas", href: "/personas", icon: UsersRound },
+      {
+        label: "Social & Web Profiles",
+        href: "/profile?section=social",
+        icon: Link2,
+      },
+    ],
   },
 ] as const;
 
@@ -57,7 +69,24 @@ function currentSection(pathname: string) {
   return "Overview";
 }
 
-export function WorkspaceShell({ children }: { children: ReactNode }) {
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return (
+    (
+      (parts[0]?.[0] ?? "") +
+      (parts.length > 1 ? parts[parts.length - 1]![0]! : "")
+    ).toUpperCase() || "?"
+  );
+}
+
+export function WorkspaceShell({
+  children,
+  viewer = { name: "Alex Morgan" },
+}: {
+  children: ReactNode;
+  /** Signed-in person shown in the sidebar and header. Defaults to the sample persona. */
+  viewer?: { name: string };
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   return (
@@ -118,11 +147,11 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3">
             <Avatar>
               <AvatarFallback className="bg-[#d9b9a3] text-[#302b27]">
-                AM
+                {initials(viewer.name)}
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-sm font-medium">Alex Morgan</p>
+              <p className="text-sm font-medium">{viewer.name}</p>
               <p className="text-xs text-white/50">Personal workspace</p>
             </div>
           </div>
@@ -153,16 +182,21 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
                 <Button variant="ghost" className="gap-2 px-2">
                   <Avatar className="size-8">
                     <AvatarFallback className="bg-[#d9b9a3] text-[#302b27]">
-                      AM
+                      {initials(viewer.name)}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden text-sm sm:inline">Alex Morgan</span>
+                  <span className="hidden text-sm sm:inline">
+                    {viewer.name}
+                  </span>
                   <ChevronDown className="text-muted-foreground size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
                   <Link href="/profile">Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/website">My Website</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/personas">Personas</Link>

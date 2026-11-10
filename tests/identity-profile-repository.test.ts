@@ -1,9 +1,6 @@
-import type { FolioneClient } from "@/lib/db-schema";
+import type { FolioneClient } from "@/lib/db/schema";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  findProfile,
-  updateProfile,
-} from "@/domains/identity/profile-repository";
+import { findProfile, updateProfile } from "@/lib/db/queries/identity";
 import { AuthorizationError } from "@/lib/supabase/server";
 
 const verifiedUserId = "0f00b3c8-7ea4-42ad-a544-4d62d1a42f54";
@@ -34,6 +31,18 @@ const profileRow = {
   website_url: null,
   linkedin_url: null,
   github_url: null,
+  full_name: null,
+  profile_image_url: null,
+  cover_image_url: null,
+  contact_email: null,
+  phone: null,
+  current_designation: null,
+  current_organization: null,
+  industry: null,
+  professional_summary: null,
+  primary_purpose: null,
+  onboarding_step: 1,
+  onboarding_completed_at: null,
   created_at: "2026-01-01T00:00:00.000Z",
   updated_at: "2026-01-01T00:00:00.000Z",
 };

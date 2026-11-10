@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PERSONA_RPC } from "@/domains/personas/persona-supabase-repository";
+import { PERSONA_RPC } from "@/lib/db/queries/personas";
 
 // Keeps docs/sql/milestone-3c/REVIEW.md (what an independent reviewer reads)
 // consistent with the SQL it describes. Text only; nothing is executed.

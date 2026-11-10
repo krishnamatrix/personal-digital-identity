@@ -1,10 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  PERSONA_READ_RPC,
-  PERSONA_RPC,
-} from "@/domains/personas/persona-supabase-repository";
+import { PERSONA_READ_RPC, PERSONA_RPC } from "@/lib/db/queries/personas";
 
 function files(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -16,9 +13,10 @@ function files(directory: string): string[] {
 
 const root = process.cwd();
 const RUNTIME = "src/domains/personas/persona-runtime.ts";
-const REPOSITORY = "src/domains/personas/persona-supabase-repository.ts";
+const REPOSITORY = "src/lib/db/queries/personas.ts";
 const personaFiles = [
   ...files(join(root, "src/domains/personas")),
+  join(root, REPOSITORY),
   ...files(join(root, "src/app/personas")),
 ];
 const read = (path: string) => readFileSync(path, "utf8");
@@ -49,7 +47,7 @@ const ALLOWED_RPCS = gateAllowlist();
  * files (must be clean) and on deliberately bad snippets (must be caught), so
  * the test is shown to detect violations rather than merely pass.
  *
- * Persistence is allowed ONLY in persona-supabase-repository.ts, ONLY as
+ * Persona persistence is allowed ONLY in src/lib/db/queries/personas.ts, ONLY as
  * PostgREST reads of `personas` (with embedded children) and calls to the nine
  * allowlisted RPCs. Nothing may write a table directly, touch Master Identity
  * tables, or use any credential or connection that bypasses RLS.
@@ -58,7 +56,7 @@ function violations(path: string, raw: string): string[] {
   const source = code(raw);
   const found: string[] = [];
   const isRuntime = path.endsWith("persona-runtime.ts");
-  const isRepository = path.endsWith("persona-supabase-repository.ts");
+  const isRepository = path.endsWith("queries/personas.ts");
 
   if (/SUPABASE_SERVICE_ROLE_KEY|service_role|serviceRole/.test(source))
     found.push("service-role credential");
@@ -140,7 +138,7 @@ describe("Persona persistence and Master Identity boundaries", () => {
     for (const name of [
       "persona-runtime.ts",
       "actions.ts",
-      "persona-supabase-repository.ts",
+      "queries/personas.ts",
       "persona-db-errors.ts",
     ])
       expect(
@@ -187,7 +185,7 @@ describe("Persona persistence and Master Identity boundaries", () => {
   });
 
   describe("the rules detect violations (not just pass on clean code)", () => {
-    const repo = "src/domains/personas/persona-supabase-repository.ts";
+    const repo = "src/lib/db/queries/personas.ts";
     const cases: [string, string, string][] = [
       [
         "Persona table read outside the repository",

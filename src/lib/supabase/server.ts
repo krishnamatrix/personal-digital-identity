@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { folioneDbOptions } from "@/lib/db-schema";
+import { folioneDbOptions } from "@/lib/db/schema";
 import { requireSupabaseConfig } from "@/lib/env";
 
 export class AuthenticationRequiredError extends Error {
@@ -17,17 +17,22 @@ export class AuthorizationError extends Error {
   }
 }
 
-export async function createClient() {
+/**
+ * `anonymous: true` builds a client that ignores the visitor's cookies, so it always runs as
+ * the database role `anon` (public website reads). It never carries a session.
+ */
+export async function createClient({ anonymous = false } = {}) {
   const { url, anonKey } = requireSupabaseConfig();
-  const cookieStore = await cookies();
+  const cookieStore = anonymous ? null : await cookies();
 
   return createServerClient(url, anonKey, {
     db: folioneDbOptions,
     cookies: {
       getAll() {
-        return cookieStore.getAll();
+        return cookieStore ? cookieStore.getAll() : [];
       },
       setAll(cookiesToSet) {
+        if (!cookieStore) return;
         try {
           cookiesToSet.forEach(({ name, value, options }) =>
             cookieStore.set(name, value, options),
