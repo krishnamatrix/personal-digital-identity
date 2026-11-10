@@ -31,11 +31,8 @@ export default async function ProfilePage({
       Object.entries(entries).map(([k, v]) => [k, v.length]),
     );
     const s = (v: string | null) => v ?? "";
-    const viewerName =
-      profile.displayName || profile.fullName || "Your workspace";
-
     return (
-      <WorkspaceShell viewer={{ name: viewerName }}>
+      <WorkspaceShell>
         <ProfileWorkspace
           profileValues={{
             fullName: s(profile.fullName),

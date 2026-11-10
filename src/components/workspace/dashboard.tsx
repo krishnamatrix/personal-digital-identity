@@ -2,6 +2,10 @@ import Link from "next/link";
 import { ArrowUpRight, Eye, Plus, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  WORKSPACE_FALLBACK_NAME,
+  type Viewer,
+} from "@/domains/identity/viewer-name";
 
 const personas = [
   {
@@ -63,14 +67,28 @@ const highlights = [
   },
 ];
 
-export function Dashboard() {
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
+  return (first + last).toUpperCase() || "?";
+}
+
+export function Dashboard({
+  viewer = { name: WORKSPACE_FALLBACK_NAME, headline: null },
+}: {
+  /** The signed-in person; their name heads the identity and preview cards. */
+  viewer?: Viewer;
+}) {
   return (
     <div className="space-y-10" data-testid="dashboard">
       <div className="flex flex-wrap items-end justify-between gap-5">
         <div>
-          <p className="eyebrow mb-3">Sunday, November 8</p>
+          <p className="eyebrow mb-3">Overview</p>
           <h1 className="font-display text-4xl md:text-[2.75rem] md:leading-tight">
-            Good morning, Alex.
+            {viewer.name === WORKSPACE_FALLBACK_NAME
+              ? "Welcome back."
+              : `Welcome back, ${viewer.name.split(/\s+/)[0]}.`}
           </h1>
           <p className="text-muted-foreground mt-2 text-[15px]">
             Your identity is taking shape. Here’s your workspace at a glance.
@@ -115,16 +133,16 @@ export function Dashboard() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="eyebrow">Your identity</p>
-              <h2 className="font-display mt-3 text-2xl">Alex Morgan</h2>
+              <h2 className="font-display mt-3 text-2xl">{viewer.name}</h2>
               <p className="text-muted-foreground mt-1 text-sm">
-                Product designer & thoughtful builder
+                {viewer.headline ?? "Add a headline in your profile"}
               </p>
             </div>
             <Badge>Private</Badge>
           </div>
           <div className="mt-8 flex items-center gap-5">
             <div className="bg-muted text-foreground flex size-16 shrink-0 items-center justify-center rounded-full text-lg font-medium ring-1 ring-black/5">
-              AM
+              {initials(viewer.name)}
             </div>
             <div className="flex-1">
               <div className="mb-2 flex justify-between text-xs">
@@ -160,7 +178,7 @@ export function Dashboard() {
           </div>
           <div className="mt-4 flex min-h-40 flex-1 items-end rounded-2xl bg-gradient-to-br from-[#f1f1f4] to-[#dfe0e6] p-5">
             <div className="w-full border-b border-black/10 pb-3">
-              <p className="font-display text-2xl">Alex Morgan</p>
+              <p className="font-display text-2xl">{viewer.name}</p>
               <p className="text-muted-foreground mt-1 text-xs">
                 Designing what comes next.
               </p>

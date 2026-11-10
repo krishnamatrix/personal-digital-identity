@@ -134,12 +134,16 @@ describe("slugs", () => {
     expect(suggestSlug(null)).toBe("");
   });
 
-  it("matches the reserved list in the SQL CHECK constraint and every top-level route", () => {
-    const sql = readFileSync("docs/sql/milestone-5/001-website.sql", "utf8");
+  it("matches the reserved list in the SQL CHECK constraints and every top-level route", () => {
+    // M8 redefines the website slug checks (adding cards/social) and uses the same list for cards.
+    const sql = readFileSync(
+      "docs/sql/milestone-8/001-digital-cards.sql",
+      "utf8",
+    );
     const arrays = [...sql.matchAll(/ARRAY\[([^\]]+)\]/g)].map((m) =>
       [...m[1]!.matchAll(/'([^']+)'/g)].map((x) => x[1]).sort(),
     );
-    expect(arrays).toHaveLength(2);
+    expect(arrays).toHaveLength(4);
     for (const a of arrays) expect(a).toEqual([...RESERVED_SLUGS].sort());
     for (const route of [
       "login",
@@ -150,6 +154,8 @@ describe("slugs", () => {
       "profile",
       "personas",
       "website",
+      "cards",
+      "social",
       "api",
       "auth",
     ])

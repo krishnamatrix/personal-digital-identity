@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { WorkspaceShell } from "@/components/workspace/workspace-shell";
+import { WorkspaceFrame } from "@/components/workspace/workspace-frame";
 
 export const metadata: Metadata = { title: "Persona not found" };
 
@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Persona not found" };
  */
 export default function PersonaNotFound() {
   return (
-    <WorkspaceShell>
+    <WorkspaceFrame>
       <section className="border-border bg-card max-w-2xl rounded-lg border p-6 md:p-8">
         <p className="eyebrow">My Personas</p>
         <h1 className="font-display mt-2 text-3xl md:text-[2.5rem] md:leading-tight">
@@ -28,6 +28,6 @@ export default function PersonaNotFound() {
           Back to Personas
         </Link>
       </section>
-    </WorkspaceShell>
+    </WorkspaceFrame>
   );
 }

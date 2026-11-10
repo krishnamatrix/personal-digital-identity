@@ -1,4 +1,4 @@
-import { WorkspaceShell } from "@/components/workspace/workspace-shell";
+import { WorkspaceFrame } from "@/components/workspace/workspace-frame";
 
 /**
  * Route loading state: quiet, static placeholders in the shared card style (no
@@ -6,7 +6,7 @@ import { WorkspaceShell } from "@/components/workspace/workspace-shell";
  */
 export default function PersonasLoading() {
   return (
-    <WorkspaceShell>
+    <WorkspaceFrame>
       <div role="status" aria-live="polite" className="space-y-7">
         <span className="sr-only">Loading Personas…</span>
         <div aria-hidden="true" className="space-y-3">
@@ -30,6 +30,6 @@ export default function PersonasLoading() {
           ))}
         </div>
       </div>
-    </WorkspaceShell>
+    </WorkspaceFrame>
   );
 }

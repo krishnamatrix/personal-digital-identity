@@ -9,6 +9,7 @@ import "server-only";
  *   queries/entries.ts    Master Identity list entries (employment, skills, links, ...)
  *   queries/website.ts    website draft, published snapshot, publish / unpublish / change slug
  *   queries/articles.ts   Articles & Thoughts (private articles + the published article snapshot)
+ *   queries/cards.ts      digital cards (private card + the published card snapshot)
  *   queries/personas.ts   Persona repository (PostgREST + RPC) used when PERSONA_STORAGE=supabase
  *
  * Rules (checked by `pnpm check:db-boundary`): no `.from()` / `.rpc()` outside src/lib/db,
@@ -20,4 +21,5 @@ export * from "@/lib/db/queries/identity";
 export * from "@/lib/db/queries/entries";
 export * from "@/lib/db/queries/website";
 export * from "@/lib/db/queries/articles";
+export * from "@/lib/db/queries/cards";
 export * from "@/lib/db/queries/personas";

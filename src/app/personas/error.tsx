@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { WorkspaceShell } from "@/components/workspace/workspace-shell";
+import { WorkspaceFrame } from "@/components/workspace/workspace-frame";
 
 /**
  * Error boundary for an unexpected failure while rendering a Persona screen.
@@ -17,7 +17,7 @@ export default function PersonasError({
   reset: () => void;
 }) {
   return (
-    <WorkspaceShell>
+    <WorkspaceFrame>
       <section
         role="alert"
         className="border-border bg-card max-w-2xl rounded-lg border p-6 md:p-8"
@@ -40,6 +40,6 @@ export default function PersonasError({
           </Link>
         </div>
       </section>
-    </WorkspaceShell>
+    </WorkspaceFrame>
   );
 }
