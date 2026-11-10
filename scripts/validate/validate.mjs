@@ -35,6 +35,8 @@ const SQL_PACKAGE = [
   "docs/sql/milestone-6/001-articles.sql",
   // M7: widens the website theme CHECK constraints to the portfolio templates.
   "docs/sql/milestone-7/001-website-templates.sql",
+  // M8: digital cards + published card snapshot (narrow anon read, like M5).
+  "docs/sql/milestone-8/001-digital-cards.sql",
 ];
 
 /**

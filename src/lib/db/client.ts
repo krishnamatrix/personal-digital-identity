@@ -17,7 +17,11 @@ export type DbClient = FolioneClient;
 /** A verified signed-in user (throws AuthenticationRequiredError) and a client carrying their JWT. */
 export async function getAuthenticatedDb(): Promise<{
   client: DbClient;
-  user: { id: string; user_metadata?: Record<string, unknown> | null };
+  user: {
+    id: string;
+    email?: string | null;
+    user_metadata?: Record<string, unknown> | null;
+  };
 }> {
   return createAuthenticatedClient();
 }

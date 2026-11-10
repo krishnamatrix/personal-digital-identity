@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
 
 describe("workspace smoke tests", () => {
   it("renders identity overview and portfolio preview", () => {
-    render(<Dashboard />);
+    render(<Dashboard viewer={{ name: "Priya Natarajan", headline: null }} />);
     expect(
-      screen.getByRole("heading", { name: "Good morning, Alex." }),
+      screen.getByRole("heading", { name: "Welcome back, Priya." }),
     ).toBeInTheDocument();
     expect(screen.getByText("Portfolio preview")).toBeInTheDocument();
     expect(screen.getByText("Your personas")).toBeInTheDocument();

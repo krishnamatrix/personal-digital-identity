@@ -63,7 +63,7 @@ export default async function WebsitePage() {
     // Contact is opt-in, so "has content" means My Identity holds something that could be shown.
     hasContent.contact = Boolean(p.contactEmail || p.phone || p.websiteUrl);
     return (
-      <WorkspaceShell viewer={{ name: state.profileName || "Your workspace" }}>
+      <WorkspaceShell>
         <WebsiteWorkspace
           origin={origin}
           initial={{
