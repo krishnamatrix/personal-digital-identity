@@ -19,9 +19,12 @@ export class WebsiteSlugTakenError extends Error {
   }
 }
 export class WebsitePersistenceError extends Error {
-  constructor() {
+  /** PostgREST / Postgres error code, kept for logs only (never shown to users). */
+  readonly code?: string;
+  constructor(code?: string) {
     super("We could not save your website. Please try again.");
     this.name = "WebsitePersistenceError";
+    this.code = code;
   }
 }
 
@@ -29,7 +32,7 @@ function mapError(error: { code?: string }): Error {
   if (error.code === "23505") return new WebsiteSlugTakenError();
   if (error.code === "42501" || error.code === "PGRST301")
     return new AuthorizationError();
-  return new WebsitePersistenceError();
+  return new WebsitePersistenceError(error.code);
 }
 
 export type SiteRow = {

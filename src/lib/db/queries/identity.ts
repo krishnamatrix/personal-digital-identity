@@ -13,9 +13,12 @@ const PROFILE_COLUMNS =
 type QueryClient = FolioneClient;
 
 export class ProfilePersistenceError extends Error {
-  constructor() {
+  /** PostgREST / Postgres error code, kept for logs only (never shown to users). */
+  readonly code?: string;
+  constructor(code?: string) {
     super("We could not save or load your profile. Please try again.");
     this.name = "ProfilePersistenceError";
+    this.code = code;
   }
 }
 
@@ -141,5 +144,5 @@ function mapProfileError(error: { code?: string }): Error {
   if (error.code === "42501" || error.code === "PGRST301") {
     return new AuthorizationError();
   }
-  return new ProfilePersistenceError();
+  return new ProfilePersistenceError(error.code);
 }

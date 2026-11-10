@@ -1,27 +1,86 @@
 import { z } from "zod";
+import {
+  TEMPLATES,
+  type TemplateCategory,
+  type TemplateId,
+  templateSpec,
+} from "@/domains/website/templates";
 
-export const THEMES = [
+/** The original three hand-built themes (src/components/website/site-view.tsx). */
+const BUILT_IN_THEMES = [
   {
     id: "professional",
     label: "Professional",
+    category: "Classic",
     blurb:
       "Editorial and restrained. A clear experience timeline for consultants, executives and founders.",
   },
   {
     id: "creative",
     label: "Creative",
+    category: "Creative",
     blurb:
       "Image-rich and expressive. Large type and visual project cards for designers, makers and developers.",
   },
   {
     id: "minimal",
     label: "Minimal",
+    category: "Minimal",
     blurb:
       "Quiet and compact. Generous whitespace and strong typography for a simple identity page.",
   },
 ] as const;
-export type ThemeId = (typeof THEMES)[number]["id"];
+
+/** Every theme a person can choose: the built-in three, then the template collection. */
+export const THEMES = [
+  ...BUILT_IN_THEMES,
+  ...TEMPLATES.map(({ id, label, category, blurb }) => ({
+    id,
+    label,
+    category,
+    blurb,
+  })),
+] as const satisfies readonly {
+  id: string;
+  label: string;
+  category: TemplateCategory;
+  blurb: string;
+}[];
+export type ThemeId = (typeof BUILT_IN_THEMES)[number]["id"] | TemplateId;
 export const THEME_IDS = THEMES.map((t) => t.id) as [ThemeId, ...ThemeId[]];
+export const THEME_CATEGORIES: readonly TemplateCategory[] = [
+  "Editorial",
+  "Classic",
+  "Minimal",
+  "Bold",
+  "Creative",
+  "Technical",
+];
+
+const BUILT_IN_COLORS = {
+  professional: { bg: "#faf8f4", fg: "#1f2328", accent: "#2f4a5a" },
+  creative: { bg: "#12101a", fg: "#ffffff", accent: "#ff7a59" },
+  minimal: { bg: "#ffffff", fg: "#171717", accent: "#737373" },
+} as const;
+
+/** Background, text and accent colour of any theme (share image, article pages). */
+export function themeColors(id: ThemeId): {
+  bg: string;
+  fg: string;
+  accent: string;
+} {
+  if (id in BUILT_IN_COLORS) {
+    return BUILT_IN_COLORS[id as keyof typeof BUILT_IN_COLORS];
+  }
+  const spec = templateSpec(id);
+  return spec
+    ? { bg: spec.palette.bg, fg: spec.palette.ink, accent: spec.palette.accent }
+    : BUILT_IN_COLORS.professional;
+}
+
+export function isThemeId(value: unknown): value is ThemeId {
+  return typeof value === "string" && THEME_IDS.includes(value as ThemeId);
+}
 
 /** Website sections. `intro` is the hero and always comes first; the rest can be reordered. */
 export const SECTION_IDS = [

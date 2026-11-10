@@ -90,3 +90,24 @@ Health: `/api/health`. Not deployed.
 - Preview is an in-app view; there is no public page, share link, or per-field visibility beyond show/hide per item.
 - Social-link platform URLs are not fetched/verified; no OAuth or sync (out of scope).
 - The sidebar still lists only Overview / Profile / Personas; the dashboard remains sample (fixture) content.
+
+## Resume import (onboarding step 1)
+
+New users can start onboarding from their resume. It lives on the first onboarding step, not on the
+sign-up form: sign-up needs email confirmation before a session exists, and nothing may be written to
+My Identity without a verified user.
+
+- **Flow:** `ResumeImport` (client) → `importResumeAction` → `importResume` service. The service verifies
+  the session first (`getAuthenticatedDb`), so anonymous requests never read the file or call the API.
+- **File handling** (`resume-file.ts`): PDF or DOCX, 5 MB max, checked by extension **and** content
+  signature. A PDF is sent to Claude as a document block; a DOCX is reduced to text with `mammoth`.
+  The file is never written to disk or storage. Server actions accept up to 6 MB (`next.config.ts`).
+- **Extraction** (`src/lib/ai/resume-extractor.ts`, the only Claude API call site): `claude-opus-5-5`,
+  low effort, structured output against `resumeExtractionSchema`, server-side refusal fallback. The
+  document is treated as data; the output is untrusted and re-validated.
+- **Merge rules** (`resume-mapping.ts`, pure and unit-tested): profile fields are filled only where the
+  profile is empty, each validated on its own; list entries are validated with the editor's per-kind
+  schema, appended after existing items, de-duplicated by title + subtitle and capped at the section
+  maximum. Nothing the person entered is overwritten or deleted.
+- **Configuration:** `ANTHROPIC_API_KEY` (server-only). Unset, the import is hidden and onboarding is
+  unchanged. Depends on the M4 SQL (`identity_entries` and the expanded profile columns).

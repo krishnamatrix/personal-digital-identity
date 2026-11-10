@@ -14,6 +14,7 @@ import {
   ONBOARDING_STEP_COUNT,
 } from "@/domains/identity/onboarding-steps";
 import { BrandMark } from "@/components/brand-mark";
+import { ResumeImport } from "@/app/onboarding/resume-import";
 import { PRIMARY_PURPOSES } from "@/domains/identity/profile-schema";
 
 type Values = Record<string, string>;
@@ -87,9 +88,12 @@ const OPTIONAL_STEPS = new Set([3, 4, 5, 6]);
 export function OnboardingFlow({
   initialStep,
   values: initialValues,
+  resumeImportEnabled = false,
 }: {
   initialStep: number;
   values: Values;
+  /** Show "Start from your resume" on the first step (needs the Claude API configured). */
+  resumeImportEnabled?: boolean;
 }) {
   const [step, setStep] = useState(
     Math.min(Math.max(initialStep, 1), ONBOARDING_STEP_COUNT),
@@ -170,6 +174,22 @@ export function OnboardingFlow({
         <p className="text-muted-foreground mt-2 mb-7 text-sm leading-6">
           {introFor(step)}
         </p>
+
+        {step === 1 && resumeImportEnabled && (
+          <div className="border-border mb-7 border-b pb-7">
+            <ResumeImport
+              onImported={(imported) =>
+                setValues((v) => {
+                  const next = { ...v };
+                  for (const [key, value] of Object.entries(imported)) {
+                    if (value) next[key] = value;
+                  }
+                  return next;
+                })
+              }
+            />
+          </div>
+        )}
 
         {step === 1 && (
           <ul className="text-muted-foreground list-disc space-y-2 pl-5 text-sm leading-6">

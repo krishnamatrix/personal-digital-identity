@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { ThemeThumb } from "@/components/website/theme-thumb";
+import type { TemplateCategory } from "@/domains/website/templates";
 import {
   useCallback,
   useEffect,
@@ -23,6 +25,7 @@ import {
 } from "@/app/website/actions";
 import {
   THEMES,
+  THEME_CATEGORIES,
   type SectionId,
   type ThemeId,
   type WebsiteConfig,
@@ -111,6 +114,7 @@ export function WebsiteWorkspace({
   const [publishedAt, setPublishedAt] = useState(initial.publishedAt);
   const [changes, setChanges] = useState(initial.hasUnpublishedChanges);
   const [theme, setTheme] = useState(initial.theme);
+  const [category, setCategory] = useState<"All" | TemplateCategory>("All");
   const [config, setConfig] = useState(initial.config);
   const [saved, setSaved] = useState(
     JSON.stringify({ theme: initial.theme, config: initial.config }),
@@ -411,32 +415,86 @@ export function WebsiteWorkspace({
         {tab === "design" &&
           (created ? (
             <div className="space-y-6">
-              <p className="text-muted-foreground text-sm leading-6">
-                Every theme shows the same content. Switching never changes your
-                Master Identity.
-              </p>
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <p className="text-muted-foreground max-w-xl text-sm leading-6">
+                  {THEMES.length} designs, each showing the same content.
+                  Switching never changes your Master Identity. Use Preview to
+                  see your own content in a design before you save it.
+                </p>
+                <div
+                  role="group"
+                  aria-label="Filter designs"
+                  className="bg-muted flex max-w-full gap-1 overflow-x-auto rounded-full p-1"
+                >
+                  {(["All", ...THEME_CATEGORIES] as const).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      aria-pressed={category === c}
+                      onClick={() => setCategory(c)}
+                      className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${category === c ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <ul
-                className="grid gap-4 md:grid-cols-3"
+                className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
                 role="radiogroup"
                 aria-label="Theme"
               >
-                {THEMES.map((t) => (
-                  <li key={t.id}>
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={theme === t.id}
-                      onClick={() => setTheme(t.id)}
-                      className={`h-full w-full rounded-lg border p-4 text-left transition ${theme === t.id ? "border-accent ring-accent ring-2" : "border-border hover:border-foreground/30"}`}
+                {THEMES.filter(
+                  (t) => category === "All" || t.category === category,
+                ).map((t) => {
+                  const selected = theme === t.id;
+                  return (
+                    <li
+                      key={t.id}
+                      className={`bg-card relative flex flex-col rounded-lg border p-3 transition ${selected ? "border-foreground ring-foreground/15 ring-4" : "border-border hover:border-foreground/30"}`}
                     >
-                      <ThemeSwatch id={t.id} />
-                      <p className="mt-3 font-medium">{t.label}</p>
-                      <p className="text-muted-foreground mt-1 text-xs leading-5">
-                        {t.blurb}
-                      </p>
-                    </button>
-                  </li>
-                ))}
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => setTheme(t.id)}
+                        className="flex-1 text-left after:absolute after:inset-0 after:rounded-lg after:content-['']"
+                      >
+                        <ThemeThumb id={t.id} />
+                        <span className="mt-3 flex items-center justify-between gap-2 px-1">
+                          <span className="font-medium">{t.label}</span>
+                          <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
+                            {t.category}
+                          </span>
+                        </span>
+                        <span className="text-muted-foreground mt-1 block px-1 text-xs leading-5">
+                          {t.blurb}
+                        </span>
+                      </button>
+                      <div className="relative z-10 mt-3 flex items-center justify-between px-1">
+                        <span className="text-xs font-medium">
+                          {selected ? "Selected" : ""}
+                        </span>
+                        <a
+                          href={`/website/preview?theme=${t.id}`}
+                          target="_blank"
+                          rel="noopener"
+                          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline-offset-4 hover:underline"
+                        >
+                          <ExternalLink
+                            className="size-3.5"
+                            aria-hidden="true"
+                          />
+                          Preview
+                          <span className="sr-only">
+                            {" "}
+                            {t.label} with your content
+                          </span>
+                        </a>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
               {publishBar}
             </div>
@@ -472,7 +530,7 @@ export function WebsiteWorkspace({
                   )}
                 </div>
                 <a
-                  href="/website/preview"
+                  href={`/website/preview?theme=${theme}`}
                   target="_blank"
                   rel="noopener"
                   className="text-accent inline-flex items-center gap-1 text-sm underline underline-offset-4"
@@ -482,7 +540,8 @@ export function WebsiteWorkspace({
               </div>
               {dirty && (
                 <p className="text-xs text-amber-700">
-                  The preview shows your last saved draft.{" "}
+                  The preview shows your selected design with your last saved
+                  content.{" "}
                   <button
                     type="button"
                     className="underline"
@@ -497,7 +556,7 @@ export function WebsiteWorkspace({
                 <iframe
                   key={previewKey}
                   title="Website preview"
-                  src="/website/preview"
+                  src={`/website/preview?theme=${theme}`}
                   style={{
                     width: DEVICES[device].width,
                     maxWidth: "100%",
@@ -602,42 +661,6 @@ export function WebsiteWorkspace({
         pending={pending}
         onConfirm={onUnpublish}
       />
-    </div>
-  );
-}
-
-function ThemeSwatch({ id }: { id: ThemeId }) {
-  if (id === "creative")
-    return (
-      <div className="h-24 rounded-md bg-[#12101a] p-3" aria-hidden="true">
-        <div className="h-3 w-2/3 rounded bg-gradient-to-r from-[#ff7a59] to-[#b66dff]" />
-        <div className="mt-2 h-2 w-1/2 rounded bg-white/30" />
-        <div className="mt-3 flex gap-2">
-          <div className="h-8 w-1/2 rounded bg-white/10" />
-          <div className="h-8 w-1/2 rounded bg-white/10" />
-        </div>
-      </div>
-    );
-  if (id === "minimal")
-    return (
-      <div className="h-24 rounded-md border bg-white p-4" aria-hidden="true">
-        <div className="h-2.5 w-1/3 rounded bg-neutral-900" />
-        <div className="mt-2 h-1.5 w-1/2 rounded bg-neutral-300" />
-        <div className="mt-4 h-1.5 w-full rounded bg-neutral-200" />
-        <div className="mt-1.5 h-1.5 w-5/6 rounded bg-neutral-200" />
-      </div>
-    );
-  return (
-    <div
-      className="h-24 rounded-md bg-[#faf8f4] p-3 ring-1 ring-[#e2ddd1]"
-      aria-hidden="true"
-    >
-      <div className="h-3 w-1/2 rounded bg-[#1f2328]" />
-      <div className="mt-2 h-2 w-2/3 rounded bg-[#2f4a5a]/50" />
-      <div className="mt-3 ml-1 space-y-1.5 border-l-2 border-[#d9d4c8] pl-3">
-        <div className="h-1.5 w-3/4 rounded bg-[#d9d4c8]" />
-        <div className="h-1.5 w-2/3 rounded bg-[#d9d4c8]" />
-      </div>
     </div>
   );
 }

@@ -1,16 +1,11 @@
 import { ImageResponse } from "next/og";
 import { getPublicSite } from "@/domains/website/website-service";
+import { themeColors } from "@/domains/website/config";
 
 export const alt = "Personal website";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const dynamic = "force-dynamic";
-
-const PALETTE = {
-  professional: { bg: "#faf8f4", fg: "#1f2328", accent: "#2f4a5a" },
-  creative: { bg: "#12101a", fg: "#ffffff", accent: "#ff7a59" },
-  minimal: { bg: "#ffffff", fg: "#171717", accent: "#737373" },
-} as const;
 
 /**
  * Typographic card from the PUBLISHED content only. Profile images are deliberately not
@@ -28,7 +23,7 @@ export default async function Image({
   } catch {
     site = null;
   }
-  const c = PALETTE[site?.theme ?? "professional"];
+  const c = themeColors(site?.theme ?? "professional");
   const person = site?.content.person;
   return new ImageResponse(
     (

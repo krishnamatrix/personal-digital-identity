@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { logLoadError } from "@/lib/server-log";
 import { redirect } from "next/navigation";
 import { AuthenticationRequiredError } from "@/lib/supabase/server";
 import { getOnboardingContext } from "@/domains/identity/profile-service";
 import { OnboardingFlow } from "@/app/onboarding/onboarding-flow";
 import { AuthCard } from "@/components/auth/auth-card";
+import { isResumeExtractionConfigured } from "@/lib/ai/resume-extractor";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,8 @@ export default async function OnboardingPage() {
   try {
     context = await getOnboardingContext();
   } catch (error) {
+    if (!(error instanceof AuthenticationRequiredError))
+      logLoadError("/onboarding", error);
     if (error instanceof AuthenticationRequiredError) redirect("/login");
     return (
       <AuthCard
@@ -31,6 +35,7 @@ export default async function OnboardingPage() {
   return (
     <OnboardingFlow
       initialStep={profile.onboardingStep}
+      resumeImportEnabled={isResumeExtractionConfigured()}
       values={{
         fullName: profile.fullName ?? signupName ?? "",
         displayName: profile.displayName ?? "",

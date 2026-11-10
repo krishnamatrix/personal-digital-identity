@@ -1,4 +1,6 @@
 import type { ThemeId } from "@/domains/website/config";
+import { templateSpec } from "@/domains/website/templates";
+import { TemplateSite } from "@/components/website/template-site";
 import type { PublishedContent } from "@/domains/website/published-content";
 import {
   contactTarget,
@@ -322,6 +324,8 @@ export function SiteView({
   theme: ThemeId;
   content: PublishedContent;
 }) {
+  const spec = templateSpec(theme);
+  if (spec) return <TemplateSite spec={spec} content={content} />;
   if (theme === "creative") return <Creative content={content} />;
   if (theme === "minimal") return <Minimal content={content} />;
   return <Professional content={content} />;

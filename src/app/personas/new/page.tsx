@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { logLoadError } from "@/lib/server-log";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { PersonaCreateFlow } from "@/app/personas/persona-create-flow";
 import { PersonaUnavailable } from "@/app/personas/persona-unavailable";
@@ -29,6 +30,8 @@ export default async function NewPersonaPage({
       </WorkspaceShell>
     );
   } catch (error) {
+    if (!(error instanceof AuthenticationRequiredError))
+      logLoadError("/personas/new", error);
     return (
       <PersonaUnavailable
         needsAuthentication={error instanceof AuthenticationRequiredError}

@@ -4,7 +4,7 @@ import type {
   PublishedSection,
   SectionOf,
 } from "@/domains/website/published-content";
-import type { ThemeId } from "@/domains/website/config";
+import type { SectionStyle } from "@/domains/website/templates";
 
 /** Section bodies shared by all themes. Each theme passes its own tone + variant. */
 export type Tone = {
@@ -86,7 +86,7 @@ export function SectionBlock({
   index,
 }: {
   section: PublishedSection;
-  variant: ThemeId;
+  variant: SectionStyle;
   tone: Tone;
   index: number;
 }) {
@@ -116,7 +116,20 @@ export function SectionBlock({
   );
 }
 
-function body(section: PublishedSection, v: ThemeId, t: Tone): ReactNode {
+/** A section's content in one of the three section styles, without its heading or frame. */
+export function SectionBody({
+  section,
+  variant,
+  tone,
+}: {
+  section: PublishedSection;
+  variant: SectionStyle;
+  tone: Tone;
+}) {
+  return <>{body(section, variant, tone)}</>;
+}
+
+function body(section: PublishedSection, v: SectionStyle, t: Tone): ReactNode {
   switch (section.id) {
     case "about":
       return (
@@ -267,7 +280,7 @@ function Experience({
   t,
 }: {
   section: SectionOf<"experience">;
-  v: ThemeId;
+  v: SectionStyle;
   t: Tone;
 }) {
   if (v === "minimal") {
@@ -328,7 +341,7 @@ function Projects({
   t,
 }: {
   section: SectionOf<"projects">;
-  v: ThemeId;
+  v: SectionStyle;
   t: Tone;
 }) {
   if (v === "minimal") {
@@ -405,7 +418,7 @@ function Articles({
   t,
 }: {
   section: SectionOf<"articles">;
-  v: ThemeId;
+  v: SectionStyle;
   t: Tone;
 }) {
   return (
@@ -480,4 +493,4 @@ export function initialsOf(name: string) {
   );
 }
 
-export { Img };
+export { Img, range };

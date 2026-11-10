@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { logLoadError } from "@/lib/server-log";
 import { FileText, Plus, Search } from "lucide-react";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,8 @@ export default async function ArticlesPage({
   try {
     data = await getArticleList(params);
   } catch (error) {
+    if (!(error instanceof AuthenticationRequiredError))
+      logLoadError("/articles", error);
     const needsAuth = error instanceof AuthenticationRequiredError;
     return (
       <WorkspaceShell>

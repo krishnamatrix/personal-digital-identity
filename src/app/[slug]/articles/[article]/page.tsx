@@ -6,12 +6,13 @@ import { getSiteUrl } from "@/lib/site-url";
 import { getPublicSite } from "@/domains/website/website-service";
 import { getPublicArticle } from "@/domains/articles/article-service";
 import { deriveExcerpt } from "@/domains/articles/rich-text";
-import type { ThemeId } from "@/domains/website/config";
+import { themeColors, type ThemeId } from "@/domains/website/config";
 
 // Unpublishing must take effect immediately: never cache this route.
 export const dynamic = "force-dynamic";
 
-const SHELL: Record<ThemeId, string> = {
+/** The built-in themes keep their tuned text colours; templates use their palette. */
+const SHELL: Partial<Record<ThemeId, string>> = {
   professional: "bg-[#faf8f4] text-[#2a2e33]",
   creative: "bg-[#12101a] text-[#e6e1f5]",
   minimal: "bg-white text-neutral-800",
@@ -83,7 +84,15 @@ export default async function PublicArticlePage({
   const { site, article } = found;
   return (
     <div
-      className={`min-h-screen ${SHELL[site.theme]}`}
+      className={`min-h-screen ${SHELL[site.theme] ?? ""}`}
+      style={
+        SHELL[site.theme]
+          ? undefined
+          : {
+              background: themeColors(site.theme).bg,
+              color: themeColors(site.theme).fg,
+            }
+      }
       data-theme={site.theme}
     >
       <header className="mx-auto flex h-14 max-w-5xl items-center justify-between px-5 text-sm">

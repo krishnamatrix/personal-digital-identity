@@ -141,6 +141,17 @@ select {
   font: inherit;
 }
 
+/* Portfolio templates: faces come from CSS variables set by template-site.tsx. */
+.t-body {
+  font-family: var(--t-body);
+}
+.t-display {
+  font-family: var(--t-display);
+  font-weight: var(--t-dw, 400);
+  letter-spacing: var(--t-dt, normal);
+  font-style: var(--t-ds, normal);
+}
+
 /* Public website themes: one gentle entrance, disabled for reduced-motion users. */
 @keyframes site-rise {
   from {

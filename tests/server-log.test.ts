@@ -61,3 +61,26 @@ describe("server request-error logging", () => {
     expect(JSON.stringify(record)).not.toMatch(/cookie|sb-token|headers/);
   });
 });
+
+describe("buildLoadErrorLog", () => {
+  it("records the error class and database code, masking personal data", async () => {
+    const { buildLoadErrorLog } = await import("@/lib/server-log");
+    const { ProfilePersistenceError } = await import(
+      "@/lib/db/queries/identity"
+    );
+    expect(
+      buildLoadErrorLog("/profile", new ProfilePersistenceError("42703")),
+    ).toMatchObject({
+      event: "page_load_error",
+      route: "/profile",
+      errorName: "ProfilePersistenceError",
+      code: "42703",
+    });
+    const record = buildLoadErrorLog("/website", {
+      name: "Error",
+      message: "failed for someone@example.com",
+    });
+    expect(record.code).toBeNull();
+    expect(JSON.stringify(record)).not.toContain("someone@example.com");
+  });
+});
