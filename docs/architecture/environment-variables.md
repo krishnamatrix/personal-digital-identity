@@ -9,6 +9,7 @@ startup needs no Supabase configuration.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser-safe publishable key | Creating a Supabase client | Identifies the project client; database access remains subject to Auth and RLS. |
 
 | `PERSONA_STORAGE` | Server-only | Optional | `fixture` (default, in-memory) or `supabase`. Choose `supabase` only after the M3C SQL, **including `004`**, has been approved, executed and verified (until `004`, a stale version hangs through PostgREST); see [Milestone 3C](milestone-3c-persona-persistence.md). Never prefix with `NEXT_PUBLIC_`. |
+| `ANTHROPIC_API_KEY` | Server-only | Optional | Enables resume import in onboarding: an uploaded PDF/DOCX is sent to the Claude API (`claude-opus-5-5`) once for structured extraction and is not stored. Unset hides the import. Never prefix with `NEXT_PUBLIC_`. |
 
 The application has no PostgreSQL connection string and no service-role key.
 The server verifies the cookie-backed Supabase session with `auth.getUser()`;

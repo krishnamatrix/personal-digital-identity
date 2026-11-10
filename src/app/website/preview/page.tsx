@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { logLoadError } from "@/lib/server-log";
 import Link from "next/link";
 import { SiteView } from "@/components/website/site-view";
 import { AuthenticationRequiredError } from "@/lib/supabase/server";
 import { getPreview } from "@/domains/website/website-service";
+import { isThemeId } from "@/domains/website/config";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -11,11 +13,19 @@ export const metadata: Metadata = {
 };
 
 /** Owner-only preview of the SAVED draft over the CURRENT My Identity. Viewing never publishes. */
-export default async function WebsitePreviewPage() {
+export default async function WebsitePreviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  // ?theme= previews the saved draft in another design (picker "Preview"); never saved.
+  const requested = (await searchParams).theme;
   let preview;
   try {
     preview = await getPreview();
   } catch (error) {
+    if (!(error instanceof AuthenticationRequiredError))
+      logLoadError("/website/preview", error);
     return (
       <main className="p-10 text-center text-sm">
         {error instanceof AuthenticationRequiredError ? (
@@ -43,7 +53,10 @@ export default async function WebsitePreviewPage() {
         Preview. Only you can see this. Nothing here is public until you
         publish.
       </div>
-      <SiteView theme={preview.theme} content={preview.content} />
+      <SiteView
+        theme={isThemeId(requested) ? requested : preview.theme}
+        content={preview.content}
+      />
     </>
   );
 }

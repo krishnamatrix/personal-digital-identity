@@ -92,3 +92,25 @@ colours. Copy link, native share (where supported), open, and a QR code (SVG, do
 - **No analytics, custom domains, password protection, `sitemap.xml`/`robots.txt`** or search-engine "noindex" toggle.
 - **Availability** cannot see other users' unpublished claims (see above).
 - Fixture mode has no website; `/website` needs Supabase configured and the SQL applied.
+
+## Portfolio templates (M7)
+
+Beyond the three hand-built themes, people can choose from 20 templates (23 designs in all),
+grouped as Editorial, Classic, Minimal, Bold, Creative and Technical in the Design tab.
+
+- **Data, not components.** `src/domains/website/templates.ts` describes each template: a page
+  layout (`split`, `centered`, `masthead`, `sidebar`, `cover`, `poster`, `terminal`), a section
+  style (reusing the built-in `professional` / `creative` / `minimal` section bodies), a heading
+  style, a type pairing, a palette and a radius. `template-site.tsx` renders any of them through
+  CSS variables, so adding a template is a data change (plus the SQL list below).
+- **Typefaces** are self-hosted by `next/font` (`template-fonts.ts`) with `preload: false`, so a
+  site downloads only its own two faces. The build fetches them from Google Fonts once; no
+  runtime request goes to Google.
+- **Preview before saving.** `/website/preview?theme=<id>` renders the owner's saved draft in any
+  valid design without saving it; the picker's "Preview" links and the Preview tab use it.
+- **Accessibility gate.** `tests/website-templates.test.tsx` requires WCAG AA contrast for body
+  text and buttons in every palette, and renders every template.
+- **Database.** The theme CHECK constraints only allowed the original three ids.
+  `docs/sql/milestone-7/001-website-templates.sql` (repeatable, constraints only) widens them;
+  a test keeps its list equal to the application's `THEME_IDS`. Until it is executed, saving or
+  publishing with a new template fails with a constraint error.

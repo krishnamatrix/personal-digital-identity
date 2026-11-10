@@ -43,3 +43,33 @@ export function buildRequestErrorLog(
     message: sanitizeMessage(error.message),
   };
 }
+
+/**
+ * Builds the log record for a page that caught a load failure and rendered a
+ * friendly fallback. Records only the error class and the database error code
+ * (for example 42703 = missing column, PGRST205 / 42P01 = missing table), never
+ * user content.
+ */
+export function buildLoadErrorLog(
+  route: string,
+  error: unknown,
+): Record<string, unknown> {
+  const e = (error ?? {}) as {
+    name?: unknown;
+    code?: unknown;
+    message?: unknown;
+  };
+  return {
+    level: "error",
+    event: "page_load_error",
+    route,
+    errorName: typeof e.name === "string" ? e.name : "Error",
+    code: typeof e.code === "string" ? e.code : null,
+    message: sanitizeMessage(e.message),
+  };
+}
+
+/** Logs a caught page-load failure as one JSON line to stderr. */
+export function logLoadError(route: string, error: unknown) {
+  console.error(JSON.stringify(buildLoadErrorLog(route, error)));
+}

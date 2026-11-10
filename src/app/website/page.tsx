@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { logLoadError } from "@/lib/server-log";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { AuthenticationRequiredError } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/site-url";
@@ -88,6 +89,8 @@ export default async function WebsitePage() {
       </WorkspaceShell>
     );
   } catch (error) {
+    if (!(error instanceof AuthenticationRequiredError))
+      logLoadError("/website", error);
     const needsAuth = error instanceof AuthenticationRequiredError;
     return (
       <WorkspaceShell>

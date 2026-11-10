@@ -32,9 +32,12 @@ export class ArticleSlugTakenError extends Error {
   }
 }
 export class ArticlePersistenceError extends Error {
-  constructor() {
+  /** PostgREST / Postgres error code, kept for logs only (never shown to users). */
+  readonly code?: string;
+  constructor(code?: string) {
     super("We could not save or load your articles. Please try again.");
     this.name = "ArticlePersistenceError";
+    this.code = code;
   }
 }
 
@@ -42,7 +45,7 @@ function mapError(error: { code?: string; message?: string }): Error {
   if (error.code === "23505") return new ArticleSlugTakenError();
   if (error.code === "42501" || error.code === "PGRST301")
     return new AuthorizationError();
-  return new ArticlePersistenceError();
+  return new ArticlePersistenceError(error.code);
 }
 
 /* Column lists: explicit, never a wildcard. */

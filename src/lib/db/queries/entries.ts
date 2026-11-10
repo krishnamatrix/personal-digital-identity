@@ -8,9 +8,12 @@ import type {
 } from "@/domains/identity/entry-kinds";
 
 export class EntryPersistenceError extends Error {
-  constructor() {
+  /** PostgREST / Postgres error code, kept for logs only (never shown to users). */
+  readonly code?: string;
+  constructor(code?: string) {
     super("We could not save or load this section. Please try again.");
     this.name = "EntryPersistenceError";
+    this.code = code;
   }
 }
 
@@ -18,7 +21,7 @@ function mapError(error: { code?: string }): Error {
   if (error.code === "42501" || error.code === "PGRST301") {
     return new AuthorizationError();
   }
-  return new EntryPersistenceError();
+  return new EntryPersistenceError(error.code);
 }
 
 export type StoredEntry = EntryItem & { kind: EntryKind; position: number };

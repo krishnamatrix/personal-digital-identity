@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { logLoadError } from "@/lib/server-log";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { AuthenticationRequiredError } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/domains/identity/profile-service";
@@ -80,6 +81,8 @@ export default async function ProfilePage({
       </WorkspaceShell>
     );
   } catch (error) {
+    if (!(error instanceof AuthenticationRequiredError))
+      logLoadError("/profile", error);
     const needsAuthentication = error instanceof AuthenticationRequiredError;
 
     return (

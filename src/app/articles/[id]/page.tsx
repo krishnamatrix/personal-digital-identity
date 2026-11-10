@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { logLoadError } from "@/lib/server-log";
 import { notFound } from "next/navigation";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { AuthenticationRequiredError } from "@/lib/supabase/server";
@@ -20,6 +21,8 @@ export default async function ArticleEditorPage({
   try {
     article = await getArticle(id);
   } catch (error) {
+    if (!(error instanceof AuthenticationRequiredError))
+      logLoadError("/articles/[id]", error);
     const needsAuth = error instanceof AuthenticationRequiredError;
     return (
       <WorkspaceShell>

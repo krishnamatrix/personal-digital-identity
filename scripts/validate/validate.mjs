@@ -33,6 +33,8 @@ const SQL_PACKAGE = [
   "docs/sql/milestone-5/001-website.sql",
   // M6: articles + published article snapshot (replaces the three website functions).
   "docs/sql/milestone-6/001-articles.sql",
+  // M7: widens the website theme CHECK constraints to the portfolio templates.
+  "docs/sql/milestone-7/001-website-templates.sql",
 ];
 
 /**
