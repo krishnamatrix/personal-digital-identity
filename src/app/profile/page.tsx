@@ -7,6 +7,7 @@ import { getOwnEntries } from "@/domains/identity/entries-service";
 import { computeCompletion } from "@/domains/identity/completion";
 import type { EntryItem, EntryKind } from "@/domains/identity/entry-kinds";
 import { ProfileWorkspace } from "@/app/profile/profile-workspace";
+import { myProfileImageDisplayUrl } from "@/domains/media/profile-image-service";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function ProfilePage({
     const counts = Object.fromEntries(
       Object.entries(entries).map(([k, v]) => [k, v.length]),
     );
+    const imageUrl = await myProfileImageDisplayUrl(profile.profileImageUrl);
     const s = (v: string | null) => v ?? "";
     return (
       <WorkspaceShell>
@@ -39,7 +41,6 @@ export default async function ProfilePage({
             displayName: s(profile.displayName),
             headline: s(profile.headline),
             summary: s(profile.summary),
-            profileImageUrl: s(profile.profileImageUrl),
             coverImageUrl: s(profile.coverImageUrl),
             location: s(profile.location),
             contactEmail: s(profile.contactEmail),
@@ -50,6 +51,7 @@ export default async function ProfilePage({
             industry: s(profile.industry),
             professionalSummary: s(profile.professionalSummary),
           }}
+          imageUrl={imageUrl}
           entries={entries}
           preview={{
             fullName: profile.fullName,
@@ -58,7 +60,7 @@ export default async function ProfilePage({
             summary: profile.summary,
             location: profile.location,
             websiteUrl: profile.websiteUrl,
-            profileImageUrl: profile.profileImageUrl,
+            profileImageUrl: imageUrl,
             coverImageUrl: profile.coverImageUrl,
             contactEmail: profile.contactEmail,
             phone: profile.phone,

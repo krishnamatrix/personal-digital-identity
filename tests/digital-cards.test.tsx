@@ -146,6 +146,7 @@ describe("card content", () => {
   it("draws only from the profile and only the fields switched on", () => {
     const config = {
       ...defaultCardConfig("professional"),
+      design: "slate" as const, // a photo-emboss design
       fields: ["role", "email", "linkedin", "x"] as const,
     };
     const content = buildCardContent(source, {
@@ -163,6 +164,25 @@ describe("card content", () => {
     expect(content.location).toBeUndefined();
     expect(content.links.map((l) => l.kind)).toEqual(["linkedin", "x"]);
     expect(cardContentSchema.safeParse(content).success).toBe(true);
+  });
+
+  it("publishes the photo only when the design embosses it", () => {
+    const monogram = buildCardContent(source, {
+      ...defaultCardConfig("professional"),
+      design: "ivory",
+    });
+    expect(monogram.photoUrl).toBeUndefined();
+    const photo = buildCardContent(source, {
+      ...defaultCardConfig("professional"),
+      design: "slate",
+    });
+    expect(photo.photoUrl).toBe("https://images.example/priya.jpg");
+    const off = buildCardContent(source, {
+      ...defaultCardConfig("professional"),
+      design: "slate",
+      usePhoto: false,
+    });
+    expect(off.photoUrl).toBeUndefined();
   });
 
   it("uses the display name and initials overrides, and a custom link", () => {
@@ -246,6 +266,7 @@ describe("card content", () => {
 describe("card rendering", () => {
   const content = buildCardContent(source, {
     ...defaultCardConfig("professional"),
+    design: "slate",
     fields: ["role", "email", "phone", "linkedin", "location"],
   });
 

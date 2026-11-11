@@ -11,8 +11,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * not an environment variable: a misconfigured value could silently point the
  * app at another schema.
  *
- * Do not confuse this with Supabase Storage bucket names: the application uses
- * no Storage, and this value must never be used as a bucket name.
+ * Do not confuse this with Supabase Storage bucket names: Storage buckets are
+ * `identity-media` and `public-media` (src/domains/media/media-paths.ts), and
+ * this value must never be used as a bucket name.
  */
 export const FOLIOONE_SCHEMA = "folioone" as const;
 

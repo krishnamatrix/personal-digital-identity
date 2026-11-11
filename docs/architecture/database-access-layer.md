@@ -14,6 +14,7 @@ src/lib/db/
     entries.ts     Master Identity list entries
     website.ts     website draft, published snapshot, publish / unpublish / change slug RPCs, public reads
     personas.ts    Persona repository (PostgREST + RPC) used when PERSONA_STORAGE=supabase
+    media.ts       Supabase Storage (M10): private profile photo, its public copies (owner session only)
 ```
 
 Dependencies point one way: `app/*` → `domains/*-service` → `lib/db/query` → `lib/supabase/server` (cookie client) → Supabase.

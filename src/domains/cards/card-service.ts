@@ -44,6 +44,12 @@ import {
   validateSlug,
   type SlugProblem,
 } from "@/domains/website/slug";
+import {
+  cleanupPublishedImages,
+  ownerImageUrl,
+  preparePublishedImage,
+  publishedImageUrl,
+} from "@/domains/media/profile-image-service";
 
 export type CardState = {
   status: CardStatus;
@@ -77,7 +83,12 @@ async function loadSource() {
       websiteUrl: profile?.websiteUrl ?? null,
       linkedinUrl: profile?.linkedinUrl ?? null,
       githubUrl: profile?.githubUrl ?? null,
-      profileImageUrl: profile?.profileImageUrl ?? null,
+      // The PUBLISHED url, so drafts compare equal to the live card.
+      profileImageUrl: publishedImageUrl(
+        user.id,
+        profile?.profileImageUrl ?? null,
+        "card",
+      ),
     },
     socialLinks: entries
       .filter((e) => e.kind === "social_link")
@@ -87,11 +98,16 @@ async function loadSource() {
         label: str(e.data.label),
       })),
   };
-  return { client, user, source };
+  return {
+    client,
+    user,
+    source,
+    rawImageUrl: profile?.profileImageUrl ?? null,
+  };
 }
 
 export async function getCardState(): Promise<CardState> {
-  const { client, user, source } = await loadSource();
+  const { client, user, source, rawImageUrl } = await loadSource();
   const card = await findCard(client, user.id);
   const config = card?.config ?? defaultCardConfig();
   const content = buildCardContent(source, config);
@@ -105,7 +121,8 @@ export async function getCardState(): Promise<CardState> {
     slug: card?.slug ?? null,
     config,
     values: fieldValues(source),
-    photoUrl: source.profile.profileImageUrl,
+    // The owner's workspace shows the private photo through a short-lived signed URL.
+    photoUrl: await ownerImageUrl(client, user.id, rawImageUrl),
     profileName: name,
     suggestedSlug: suggestSlug(name),
     publishedAt: card?.publishedAt?.toISOString() ?? null,
@@ -189,7 +206,7 @@ export class CardPublishBlockedError extends Error {
 
 /** Builds the card from My Identity + the SAVED config right now, and publishes it. */
 export async function publishMyCard(): Promise<Date> {
-  const { client, user, source } = await loadSource();
+  const { client, user, source, rawImageUrl } = await loadSource();
   const card = await findCard(client, user.id);
   if (!card?.slug) throw new CardPublishBlockedError([]);
   const content = buildCardContent(source, card.config);
@@ -200,16 +217,21 @@ export async function publishMyCard(): Promise<Date> {
     !(await hasActivePro(client, user.id))
   )
     throw new ProRequiredError();
-  return publishCard(client, {
+  if (content.photoUrl)
+    await preparePublishedImage(client, user.id, rawImageUrl, "card");
+  const publishedAt = await publishCard(client, {
     type: card.config.type,
     design: card.config.design,
     content,
   });
+  await cleanupPublishedImages(client, user.id, "card", content.photoUrl);
+  return publishedAt;
 }
 
 export async function unpublishMyCard(): Promise<void> {
-  const { client } = await getAuthenticatedDb();
+  const { client, user } = await getAuthenticatedDb();
   await unpublishCard(client);
+  await cleanupPublishedImages(client, user.id, "card", null);
 }
 
 /** Public read: anonymous client, live rows only. */

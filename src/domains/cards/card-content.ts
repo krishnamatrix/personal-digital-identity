@@ -5,6 +5,7 @@ import {
   type CardConfig,
   type CardField,
 } from "./card-config";
+import { cardDesign } from "./card-designs";
 
 /**
  * The PUBLISHED card: the only thing /social/<slug> reads. Built from My Identity + the card
@@ -135,11 +136,13 @@ export function buildCardContent(
   source: CardSource,
   config: CardConfig,
 ): CardContent {
+  // The photo is published only when the chosen design actually shows it (photo emboss).
+  const showsPhoto = cardDesign(config.design).emboss === "photo";
   return composeCardContent(
     {
       values: fieldValues(source),
       profileName: cardName(source, { ...config, displayName: "" }),
-      photoUrl: source.profile.profileImageUrl,
+      photoUrl: showsPhoto ? source.profile.profileImageUrl : null,
     },
     config,
   );

@@ -94,3 +94,15 @@ PRO. The alternatives were worse: a service-role key bypasses all RLS (AD-004) a
 account (`PT402`), so the lock holds even against direct API calls. Each payment buys 30 days with no automatic renewal.
 No webhooks (they would need a credential outside a user session).
 **Details.** `m9-pro-plans.md`, `docs/sql/milestone-9/`.
+
+## AD-012: Profile photos are stored privately and copied to a public bucket only on publish
+
+**Decision.** Uploaded photos live in the private Storage bucket `identity-media` at `<account_id>/profile/<image_id>.<ext>`
+and are referenced from `identity_profiles.profile_image_url` by their authenticated object URL (no schema change; external
+image links keep working). Publishing the website or card copies the photo to the public bucket `public-media` at
+`<account_id>/website/…` or `<account_id>/card/…`; the snapshot stores that public URL. Unpublishing, or publishing with a
+different photo, deletes the old copies. Storage policies let only the owner (first folder = `auth.uid()`) read, insert or
+delete; there is no UPDATE policy, so objects are never overwritten. All calls use the owner's session (AD-004).
+**Why.** AD-005: nothing becomes public by editing. A single public bucket would expose every uploaded photo before its owner
+published anything; one copy per surface lets the website and card show different photos and be unpublished separately.
+**Details.** `m10-profile-media.md`, `docs/sql/milestone-10/`.

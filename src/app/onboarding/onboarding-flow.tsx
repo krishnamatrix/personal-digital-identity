@@ -15,6 +15,7 @@ import {
 } from "@/domains/identity/onboarding-steps";
 import { BrandMark } from "@/components/brand-mark";
 import { ResumeImport } from "@/app/onboarding/resume-import";
+import { ProfileImageUpload } from "@/components/profile/profile-image-upload";
 import { PRIMARY_PURPOSES } from "@/domains/identity/profile-schema";
 
 type Values = Record<string, string>;
@@ -89,9 +90,12 @@ export function OnboardingFlow({
   initialStep,
   values: initialValues,
   resumeImportEnabled = false,
+  imageUrl = null,
 }: {
   initialStep: number;
   values: Values;
+  /** Displayable URL of the current photo (signed URL for an upload). */
+  imageUrl?: string | null;
   /** Show "Start from your resume" on the first step (needs the Gemini API configured). */
   resumeImportEnabled?: boolean;
 }) {
@@ -201,7 +205,14 @@ export function OnboardingFlow({
 
         {step >= 2 && step <= 5 && (
           <div className="space-y-5">
-            {fieldsForStep(step).map((key) => (
+            {step === 4 && (
+              <ProfileImageUpload
+                initialUrl={imageUrl}
+                name={values.displayName || values.fullName}
+                onChange={(ref) => set("profileImageUrl", ref ?? "")}
+              />
+            )}
+            {(step === 4 ? [] : fieldsForStep(step)).map((key) => (
               <Field
                 key={key}
                 spec={FIELD_SPECS[key]!}
@@ -210,12 +221,6 @@ export function OnboardingFlow({
                 onChange={(v) => set(key, v)}
               />
             ))}
-            {step === 4 && (
-              <p className="text-muted-foreground text-xs leading-5">
-                Paste a link to an image you host elsewhere. File upload is
-                coming soon.
-              </p>
-            )}
           </div>
         )}
 

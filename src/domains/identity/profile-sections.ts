@@ -19,12 +19,6 @@ export const PROFILE_SECTIONS: Record<
         placeholder: "Product designer and thoughtful builder",
       },
       { key: "summary", label: "Biography", type: "textarea", max: 2000 },
-      {
-        key: "profileImageUrl",
-        label: "Profile image URL",
-        type: "url",
-        help: "Link to an image hosted elsewhere. Upload is coming soon.",
-      },
       { key: "coverImageUrl", label: "Cover image URL", type: "url" },
       { key: "location", label: "Location", type: "text", max: 160 },
       { key: "contactEmail", label: "Contact email", type: "email" },

@@ -6,13 +6,16 @@ import { getOnboardingContext } from "@/domains/identity/profile-service";
 import { OnboardingFlow } from "@/app/onboarding/onboarding-flow";
 import { AuthCard } from "@/components/auth/auth-card";
 import { isResumeExtractionConfigured } from "@/lib/ai/resume-extractor";
+import { myProfileImageDisplayUrl } from "@/domains/media/profile-image-service";
 
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {
   let context;
+  let imageUrl: string | null = null;
   try {
     context = await getOnboardingContext();
+    imageUrl = await myProfileImageDisplayUrl(context.profile.profileImageUrl);
   } catch (error) {
     if (!(error instanceof AuthenticationRequiredError))
       logLoadError("/onboarding", error);
@@ -36,6 +39,7 @@ export default async function OnboardingPage() {
     <OnboardingFlow
       initialStep={profile.onboardingStep}
       resumeImportEnabled={isResumeExtractionConfigured()}
+      imageUrl={imageUrl}
       values={{
         fullName: profile.fullName ?? signupName ?? "",
         displayName: profile.displayName ?? "",

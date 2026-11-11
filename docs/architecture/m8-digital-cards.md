@@ -15,7 +15,8 @@ designs. Three steps in the workspace (`/cards`, sidebar "Digital Cards"):
    https URL, the only value stored on the card itself), and whether to use the profile photo.
    Fields that are not in My Identity are disabled with a link to add them.
 2. **Design**: 32 designs (`src/domains/cards/card-designs.ts`), 7 layouts, filterable by
-   category. Designs with a `photo` emboss fade the profile photo into the card; without a
+   category. Designs with a `photo` emboss fade the profile photo into the card (the photo is published only for these
+   designs; see `m10-profile-media.md`); without a
    photo (or with the switch off) they emboss the initials instead. `monogram` designs always
    emboss the initials.
 3. **Share**: claim the address, publish / update / unpublish, copy or open the link.

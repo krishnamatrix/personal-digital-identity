@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { EntryListEditor } from "@/app/profile/entry-list-editor";
 import { ProfileFieldsForm } from "@/app/profile/profile-fields-form";
+import { ProfileImageUpload } from "@/components/profile/profile-image-upload";
 import {
   ProfilePreview,
   type PreviewProfile,
@@ -62,6 +64,8 @@ const SECTIONS: { id: SectionId; label: string; blurb: string }[] = [
 
 type Props = {
   profileValues: Record<string, string>;
+  /** Displayable URL of the current photo (signed URL for an upload). */
+  imageUrl: string | null;
   entries: Partial<Record<EntryKind, EntryItem[]>>;
   preview: PreviewProfile;
   completion: { percent: number; items: CompletionItem[] };
@@ -72,6 +76,7 @@ type Props = {
 
 export function ProfileWorkspace({
   profileValues,
+  imageUrl,
   entries,
   preview,
   completion,
@@ -84,6 +89,7 @@ export function ProfileWorkspace({
       ? (initialSection as SectionId)
       : "personal",
   );
+  const router = useRouter();
   const [dirtySet, setDirtySet] = useState<ReadonlySet<string>>(new Set());
 
   const setDirty = useCallback((key: string, dirty: boolean) => {
@@ -240,7 +246,12 @@ export function ProfileWorkspace({
           </p>
 
           {/* All panels stay mounted so unsaved drafts survive switching sections. */}
-          <div hidden={active !== "personal"}>
+          <div hidden={active !== "personal"} className="space-y-8">
+            <ProfileImageUpload
+              initialUrl={imageUrl}
+              name={profileValues.displayName || profileValues.fullName}
+              onChange={() => router.refresh()}
+            />
             <ProfileFieldsForm
               section="personal"
               initial={profileValues}

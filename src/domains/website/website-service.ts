@@ -43,6 +43,12 @@ import {
   type SlugProblem,
 } from "@/domains/website/slug";
 import { z } from "zod";
+import {
+  cleanupPublishedImages,
+  ownerImageUrl,
+  preparePublishedImage,
+  publishedImageUrl,
+} from "@/domains/media/profile-image-service";
 
 export type WebsiteState = {
   status: WebsiteStatus;
@@ -79,10 +85,23 @@ async function loadSource() {
     readingMinutes: a.readingMinutes,
     version: a.version,
   }));
+  // Drafts are built with the photo's PUBLISHED url, so they compare equal to the snapshot.
+  const sourceProfile = {
+    ...profile,
+    profileImageUrl: publishedImageUrl(
+      user.id,
+      profile.profileImageUrl,
+      "website",
+    ),
+  };
   return {
     client,
     user,
-    source: { profile, entries, articles } satisfies IdentitySource,
+    source: {
+      profile: sourceProfile,
+      entries,
+      articles,
+    } satisfies IdentitySource,
     profile,
   };
 }
@@ -178,7 +197,7 @@ export class PublishBlockedError extends Error {
 
 /** Builds the snapshot from My Identity + the SAVED draft right now, and publishes it. */
 export async function publishWebsite(): Promise<Date> {
-  const { client, user, source } = await loadSource();
+  const { client, user, source, profile } = await loadSource();
   const site = await findSite(client, user.id);
   if (!site) throw new PublishBlockedError([]);
   const content = buildPublishedContent(source, site.config);
@@ -186,30 +205,49 @@ export async function publishWebsite(): Promise<Date> {
   if (problems.length) throw new PublishBlockedError(problems);
   if (isProWebsiteTheme(site.theme) && !(await hasActivePro(client, user.id)))
     throw new ProRequiredError();
+  if (content.person.imageUrl)
+    await preparePublishedImage(
+      client,
+      user.id,
+      profile.profileImageUrl,
+      "website",
+    );
   const seo = defaultSeo(content);
-  return publish(client, {
+  const publishedAt = await publish(client, {
     theme: site.theme,
     title: (site.config.seo.title || seo.title).slice(0, 200),
     description: (site.config.seo.description || seo.description).slice(0, 400),
     content,
     articleIds: selectedArticles(source, site.config).map((a) => a.id),
   });
+  await cleanupPublishedImages(
+    client,
+    user.id,
+    "website",
+    content.person.imageUrl,
+  );
+  return publishedAt;
 }
 
 export async function unpublishWebsite(): Promise<void> {
-  const { client } = await getAuthenticatedDb();
+  const { client, user } = await getAuthenticatedDb();
   await unpublish(client);
+  await cleanupPublishedImages(client, user.id, "website", null);
 }
 
 /** Content for the owner's preview: current My Identity + saved draft (never published by viewing). */
 export async function getPreview() {
-  const { client, user, source } = await loadSource();
+  const { client, user, source, profile } = await loadSource();
   const site = await findSite(client, user.id);
   if (!site) return null;
-  return {
-    theme: site.theme,
-    content: buildPublishedContent(source, site.config),
-  };
+  const content = buildPublishedContent(source, site.config);
+  // The public copy only exists after publishing; the owner's preview uses a signed URL.
+  if (content.person.imageUrl) {
+    const shown = await ownerImageUrl(client, user.id, profile.profileImageUrl);
+    content.person = { ...content.person, imageUrl: shown ?? undefined };
+    if (!shown) delete content.person.imageUrl;
+  }
+  return { theme: site.theme, content };
 }
 
 /** Public read: anonymous client, live rows only. */
