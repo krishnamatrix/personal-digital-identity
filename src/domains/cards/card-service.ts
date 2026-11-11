@@ -35,6 +35,8 @@ import {
   type CardProblem,
   type CardSource,
 } from "./card-content";
+import { hasActivePro } from "@/domains/billing/billing-service";
+import { isProCardDesign, ProRequiredError } from "@/domains/billing/plans";
 import { stableStringify } from "@/domains/website/build-published";
 import {
   normalizeSlug,
@@ -133,7 +135,14 @@ async function ensureCard(): Promise<{
 
 export async function saveMyCardDraft(input: unknown): Promise<void> {
   const config = normalizeCardConfig(cardConfigSchema.parse(input));
-  const { client, userId } = await ensureCard();
+  const { client, userId, card } = await ensureCard();
+  // Switching TO a PRO design needs PRO; keeping one chosen earlier does not (same rule as SQL).
+  if (
+    config.design !== card.config.design &&
+    isProCardDesign(config.design) &&
+    !(await hasActivePro(client, userId))
+  )
+    throw new ProRequiredError();
   await saveCardDraft(client, userId, config);
 }
 
@@ -186,6 +195,11 @@ export async function publishMyCard(): Promise<Date> {
   const content = buildCardContent(source, card.config);
   const problems = cardProblems(content);
   if (problems.length) throw new CardPublishBlockedError(problems);
+  if (
+    isProCardDesign(card.config.design) &&
+    !(await hasActivePro(client, user.id))
+  )
+    throw new ProRequiredError();
   return publishCard(client, {
     type: card.config.type,
     design: card.config.design,

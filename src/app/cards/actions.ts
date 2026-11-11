@@ -18,17 +18,27 @@ import {
   unpublishMyCard,
   type CardSlugCheck,
 } from "@/domains/cards/card-service";
+import { ProRequiredError } from "@/domains/billing/plans";
 import { SLUG_MESSAGES } from "@/domains/website/slug";
 import { logLoadError } from "@/lib/server-log";
 
 export type CardActionResult = {
   ok: boolean;
   message: string;
+  /** The chosen design needs PRO: the UI offers the pricing page. */
+  proRequired?: boolean;
   slug?: string;
   publishedAt?: string;
 };
 
 function failure(action: string, error: unknown): CardActionResult {
+  if (error instanceof ProRequiredError)
+    return {
+      ok: false,
+      proRequired: true,
+      message:
+        "This design is part of Folioone PRO. Upgrade, or choose one of the free designs.",
+    };
   if (error instanceof AuthenticationRequiredError)
     return {
       ok: false,

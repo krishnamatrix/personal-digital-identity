@@ -67,7 +67,7 @@ pages, components, actions, route handlers and middleware never query. Column li
 **Why.** One obvious, auditable place for every query; public reads can be proven to touch only approved columns; the boundary is
 machine-checked (`pnpm check:db-boundary`, part of `pnpm validate`) rather than convention.
 **Unchanged.** RLS remains the authorization authority; the layer is an architectural boundary, not a replacement. No service-role
-credentials, direct connections or SECURITY DEFINER. Details: `database-access-layer.md`.
+credentials, direct connections or SECURITY DEFINER (single reviewed exception: AD-011). Details: `database-access-layer.md`.
 
 ## AD-010: Articles are canonical identity content published through the website snapshot
 
@@ -77,3 +77,20 @@ rendered by our own renderer, not HTML. A trigger removes a snapshot row the mom
 **Why.** One publishing architecture (M5), immediate revocation without request-time reads of private tables, no stored-XSS
 surface, and article ownership independent of URL slugs (so Personas can adopt articles later).
 **Details.** `m6-articles-and-thoughts.md`.
+
+## AD-011: PRO is granted only by one narrow SECURITY DEFINER function
+
+**Decision.** Plans live in `folioone.account_plans` (one row per account, `free` or `pro` with `pro_until`) and verified
+payments in `folioone.pro_payments`. Users may read their own rows and create only a Free row; nobody but
+`folioone.billing_activate_pro` can write PRO. That function is the project's **only** SECURITY DEFINER function. It acts
+for `auth.uid()` only, accepts only the published prices (INR 299 / USD 5) and 30 days, and requires a proof:
+HMAC-SHA256 over `account|order|payment|amount|currency|days` keyed with `FOLIOONE_ENTITLEMENT_SECRET`, a secret held only
+by the app server and by `folioone.billing_secrets` (no grants, no policies). The server computes the proof only after
+verifying the payment with Razorpay (Checkout signature, order created by us for this account, PRO price, payment captured).
+Each Razorpay order and payment is recorded once.
+**Why.** A plan the user could write through RLS would let anyone call PostgREST with their own token and make themselves
+PRO. The alternatives were worse: a service-role key bypasses all RLS (AD-004) and a manual step would delay activation.
+**Also.** Triggers (SECURITY INVOKER, via `folioone.has_pro()`) refuse choosing or publishing a PRO-only design on a Free
+account (`PT402`), so the lock holds even against direct API calls. Each payment buys 30 days with no automatic renewal.
+No webhooks (they would need a credential outside a user session).
+**Details.** `m9-pro-plans.md`, `docs/sql/milestone-9/`.

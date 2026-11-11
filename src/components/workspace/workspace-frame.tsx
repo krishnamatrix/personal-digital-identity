@@ -80,6 +80,18 @@ function ViewerMark({ name }: { name: string }) {
   return <>{initials(name)}</>;
 }
 
+/** "PRO" written as a superscript after the person's name. */
+export function ProMark() {
+  return (
+    <sup
+      aria-label="PRO plan"
+      className="ml-1 rounded-[4px] bg-gradient-to-r from-amber-500 to-orange-600 px-1 py-px align-super text-[8.5px] font-bold tracking-[.08em] text-white"
+    >
+      PRO
+    </sup>
+  );
+}
+
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   return (
@@ -101,7 +113,7 @@ export function WorkspaceFrame({
 }: {
   children: ReactNode;
   /** Signed-in person shown in the sidebar and header. */
-  viewer?: { name: string };
+  viewer?: { name: string; isPro?: boolean };
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -179,8 +191,24 @@ export function WorkspaceFrame({
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{viewer.name}</p>
-              <p className="text-sidebar-muted text-xs">Personal workspace</p>
+              <p className="truncate text-sm font-medium">
+                {viewer.name}
+                {viewer.isPro && <ProMark />}
+              </p>
+              {viewer.isPro ? (
+                <p className="text-sidebar-muted text-xs">PRO workspace</p>
+              ) : (
+                <p className="text-sidebar-muted text-xs">
+                  Free plan ·{" "}
+                  <Link
+                    href="/pricing"
+                    onClick={() => setOpen(false)}
+                    className="text-foreground font-medium underline-offset-4 hover:underline"
+                  >
+                    Upgrade
+                  </Link>
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -219,6 +247,7 @@ export function WorkspaceFrame({
                     </Avatar>
                     <span className="hidden text-sm sm:inline">
                       {viewer.name}
+                      {viewer.isPro && <ProMark />}
                     </span>
                     <ChevronDown className="text-muted-foreground size-4" />
                   </Button>
@@ -232,6 +261,11 @@ export function WorkspaceFrame({
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/personas">Personas</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/pricing">
+                      {viewer.isPro ? "Your PRO plan" : "Upgrade to PRO"}
+                    </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

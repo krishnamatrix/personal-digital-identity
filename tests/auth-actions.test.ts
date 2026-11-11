@@ -34,7 +34,7 @@ describe("authentication actions", () => {
     form.set("password", "synthetic-test-password");
 
     await expect(loginAction({ error: null }, form)).rejects.toThrow(
-      "redirect:/profile",
+      "redirect:/onboarding",
     );
     expect(mocks.signInWithPassword).toHaveBeenCalledWith({
       email: "dev@example.test",

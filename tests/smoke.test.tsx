@@ -6,7 +6,11 @@ import { cn } from "@/lib/utils";
 
 describe("workspace smoke tests", () => {
   it("renders identity overview and portfolio preview", () => {
-    render(<Dashboard viewer={{ name: "Priya Natarajan", headline: null }} />);
+    render(
+      <Dashboard
+        viewer={{ name: "Priya Natarajan", headline: null, isPro: false }}
+      />,
+    );
     expect(
       screen.getByRole("heading", { name: "Welcome back, Priya." }),
     ).toBeInTheDocument();

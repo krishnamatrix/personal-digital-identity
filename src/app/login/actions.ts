@@ -38,7 +38,8 @@ export async function loginAction(
     return { error: "We could not sign you in with those credentials." };
   }
 
-  redirect("/profile");
+  // Onboarding sends anyone who has already finished it straight on to /profile.
+  redirect("/onboarding");
 }
 
 export async function logoutAction(

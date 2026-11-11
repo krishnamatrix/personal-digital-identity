@@ -23,7 +23,7 @@ Services orchestrate and validate; they hold the client handle only to pass it i
 
 - Authentication, RLS, grants, SQL, RPC names and signatures, the fixture adapter, `PERSONA_STORAGE=fixture` default.
 - Every authenticated query still carries the user's JWT (anon key + session cookie). No service-role key, no direct
-  Postgres connection, no SECURITY DEFINER. `getAnonymousDb()` ignores cookies, so it is always the `anon` role.
+  Postgres connection, no SECURITY DEFINER (one reviewed exception, `billing_activate_pro`; see AD-011). `getAnonymousDb()` ignores cookies, so it is always the `anon` role.
 - `supabase.auth.*` calls (sign-in, sign-up, reset, callback) remain in the auth actions: they talk to Supabase Auth, not the database.
 
 ## Rules the check enforces (fails with `file:line`)

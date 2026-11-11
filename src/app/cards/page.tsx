@@ -5,6 +5,7 @@ import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { AuthenticationRequiredError } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/site-url";
 import { getCardState } from "@/domains/cards/card-service";
+import { getViewer } from "@/domains/identity/viewer";
 import { CardsWorkspace } from "@/app/cards/cards-workspace";
 
 export const metadata: Metadata = { title: "Digital Cards" };
@@ -14,9 +15,14 @@ export default async function CardsPage() {
   try {
     const state = await getCardState();
     const origin = await getSiteUrl();
+    const viewer = await getViewer();
     return (
       <WorkspaceShell>
-        <CardsWorkspace initial={state} origin={origin} />
+        <CardsWorkspace
+          initial={state}
+          origin={origin}
+          isPro={viewer?.isPro ?? false}
+        />
       </WorkspaceShell>
     );
   } catch (error) {

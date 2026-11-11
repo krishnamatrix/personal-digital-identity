@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ProLockBadge, ProPlansLink } from "@/components/billing/pro-lock";
+import { isProWebsiteTheme } from "@/domains/billing/plans";
 import { ThemeThumb } from "@/components/website/theme-thumb";
 import type { TemplateCategory } from "@/domains/website/templates";
 import {
@@ -99,8 +102,11 @@ export function WebsiteWorkspace({
   hasContent,
   has,
   suggestedSlug,
+  isPro = false,
 }: {
   origin: string;
+  /** PRO plan active: every design is open. */
+  isPro?: boolean;
   initial: Initial;
   choices: Partial<Record<SectionId, EntryChoice[]>>;
   articleChoices: ArticleChoice[];
@@ -108,6 +114,7 @@ export function WebsiteWorkspace({
   has: { email: boolean; phone: boolean; website: boolean; name: boolean };
   suggestedSlug: string;
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
   const [slug, setSlug] = useState(initial.slug);
   const [status, setStatus] = useState(initial.status);
@@ -121,9 +128,11 @@ export function WebsiteWorkspace({
   );
   const [previewKey, setPreviewKey] = useState(0);
   const [device, setDevice] = useState<keyof typeof DEVICES>("desktop");
-  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(
-    null,
-  );
+  const [notice, setNotice] = useState<{
+    ok: boolean;
+    text: string;
+    pro?: boolean;
+  } | null>(null);
   const [confirmUnpublish, setConfirmUnpublish] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -139,7 +148,9 @@ export function WebsiteWorkspace({
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  const say = (ok: boolean, text: string) => setNotice({ ok, text });
+  const say = (ok: boolean, text: string, pro?: boolean) =>
+    setNotice({ ok, text, pro });
+  const savedTheme = (JSON.parse(saved) as { theme: ThemeId }).theme;
 
   const saveDraft = useCallback(async () => {
     const r = await saveDraftAction(theme, config);
@@ -154,7 +165,7 @@ export function WebsiteWorkspace({
   function onSaveDraft() {
     startTransition(async () => {
       const r = await saveDraft();
-      say(r.ok, r.message);
+      say(r.ok, r.message, r.proRequired);
     });
   }
 
@@ -162,7 +173,7 @@ export function WebsiteWorkspace({
     startTransition(async () => {
       if (dirty) {
         const d = await saveDraft();
-        if (!d.ok) return say(false, d.message);
+        if (!d.ok) return say(false, d.message, d.proRequired);
       }
       const r = await publishAction();
       if (r.ok) {
@@ -170,7 +181,7 @@ export function WebsiteWorkspace({
         setPublishedAt(r.publishedAt ?? new Date().toISOString());
         setChanges(false);
       }
-      say(r.ok, r.message);
+      say(r.ok, r.message, r.proRequired);
     });
   }
 
@@ -250,6 +261,7 @@ export function WebsiteWorkspace({
           className={`rounded-md border px-4 py-3 text-sm ${notice.ok ? "border-green-200 bg-green-50 text-green-900" : "border-red-200 bg-red-50 text-red-800"}`}
         >
           {notice.text}
+          {notice.pro && <ProPlansLink from="website" />}
         </p>
       )}
 
@@ -448,6 +460,9 @@ export function WebsiteWorkspace({
                   (t) => category === "All" || t.category === category,
                 ).map((t) => {
                   const selected = theme === t.id;
+                  // A PRO design stays usable if it is already the saved one.
+                  const locked =
+                    !isPro && isProWebsiteTheme(t.id) && savedTheme !== t.id;
                   return (
                     <li
                       key={t.id}
@@ -457,9 +472,17 @@ export function WebsiteWorkspace({
                         type="button"
                         role="radio"
                         aria-checked={selected}
-                        onClick={() => setTheme(t.id)}
+                        aria-label={
+                          locked ? `${t.label} (PRO, see plans)` : undefined
+                        }
+                        onClick={() =>
+                          locked
+                            ? router.push("/pricing?from=website")
+                            : setTheme(t.id)
+                        }
                         className="flex-1 text-left after:absolute after:inset-0 after:rounded-lg after:content-['']"
                       >
+                        {locked && <ProLockBadge />}
                         <ThemeThumb id={t.id} />
                         <span className="mt-3 flex items-center justify-between gap-2 px-1">
                           <span className="font-medium">{t.label}</span>
@@ -473,7 +496,7 @@ export function WebsiteWorkspace({
                       </button>
                       <div className="relative z-10 mt-3 flex items-center justify-between px-1">
                         <span className="text-xs font-medium">
-                          {selected ? "Selected" : ""}
+                          {selected ? "Selected" : locked ? "PRO" : ""}
                         </span>
                         <a
                           href={`/website/preview?theme=${t.id}`}

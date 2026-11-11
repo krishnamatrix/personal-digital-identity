@@ -116,12 +116,12 @@ export function AddressEditor({
         Your address
       </label>
       <div className="flex items-center gap-0 text-sm">
-        <span className="border-border bg-muted text-muted-foreground flex h-10 items-center rounded-l-md border border-r-0 px-3 break-all">
+        <span className="border-border bg-muted text-muted-foreground flex h-10 items-center rounded-l-md border border-r-0 px-3 whitespace-nowrap">
           {origin.replace(/^https?:\/\//, "")}/
         </span>
         <Input
           id="slug"
-          className="rounded-l-none"
+          className="min-w-0 flex-1 rounded-l-none"
           value={value}
           maxLength={SLUG_MAX + 10}
           autoComplete="off"

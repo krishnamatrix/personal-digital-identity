@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { logLoadError } from "@/lib/server-log";
+import { getViewer } from "@/domains/identity/viewer";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { AuthenticationRequiredError } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/site-url";
@@ -39,6 +40,7 @@ export default async function WebsitePage() {
     const { source, site } = state;
     const config = site?.config ?? defaultConfig();
     const origin = await getSiteUrl();
+    const viewer = await getViewer();
 
     const choices: Partial<Record<SectionId, EntryChoice[]>> = {};
     const hasContent = {} as Record<SectionId, boolean>;
@@ -66,6 +68,7 @@ export default async function WebsitePage() {
       <WorkspaceShell>
         <WebsiteWorkspace
           origin={origin}
+          isPro={viewer?.isPro ?? false}
           initial={{
             status: state.status,
             slug: site?.slug ?? null,

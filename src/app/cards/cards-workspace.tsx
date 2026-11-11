@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ProLockBadge, ProPlansLink } from "@/components/billing/pro-lock";
+import { isProCardDesign } from "@/domains/billing/plans";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { ArrowLeft, ArrowRight, Check, Copy, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -80,18 +83,24 @@ const FIELD_SOURCE: Record<Exclude<CardField, "custom">, string> = {
 export function CardsWorkspace({
   initial,
   origin,
+  isPro = false,
 }: {
   initial: CardState;
   origin: string;
+  /** PRO plan active: every design is open. */
+  isPro?: boolean;
 }) {
+  const router = useRouter();
   const [step, setStep] = useState<Step>("details");
   const [config, setConfig] = useState<CardConfig>(initial.config);
   const [saved, setSaved] = useState<CardConfig>(initial.config);
   const [status, setStatus] = useState<CardStatus>(initial.status);
   const [slug, setSlug] = useState<string | null>(initial.slug);
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(
-    null,
-  );
+  const [message, setMessage] = useState<{
+    ok: boolean;
+    text: string;
+    pro?: boolean;
+  } | null>(null);
   const [pending, start] = useTransition();
   const [category, setCategory] = useState<"Suggested" | CardCategory>(
     "Suggested",
@@ -140,7 +149,11 @@ export function CardsWorkspace({
   function save(next?: Step) {
     start(async () => {
       const result = await saveCardAction(config);
-      setMessage({ ok: result.ok, text: result.message });
+      setMessage({
+        ok: result.ok,
+        text: result.message,
+        pro: result.proRequired,
+      });
       if (result.ok) {
         setSaved(config);
         if (status === "not_created") setStatus("draft");
@@ -437,15 +450,27 @@ export function CardsWorkspace({
               <ul className="mt-4 grid gap-4 sm:grid-cols-2">
                 {designs.map((d) => {
                   const active = config.design === d.id;
+                  // A PRO design stays usable if it is already the saved one.
+                  const locked =
+                    !isPro && isProCardDesign(d.id) && saved.design !== d.id;
                   return (
                     <li key={d.id}>
                       <button
                         type="button"
                         aria-pressed={active}
-                        aria-label={`${d.label} design`}
-                        onClick={() => update({ design: d.id })}
-                        className={`w-full rounded-lg p-2 text-left transition ${active ? "ring-foreground bg-background ring-2" : "hover:bg-background ring-1 ring-black/5"}`}
+                        aria-label={
+                          locked
+                            ? `${d.label} design (PRO, see plans)`
+                            : `${d.label} design`
+                        }
+                        onClick={() =>
+                          locked
+                            ? router.push("/pricing?from=cards")
+                            : update({ design: d.id })
+                        }
+                        className={`relative w-full rounded-lg p-2 text-left transition ${active ? "ring-foreground bg-background ring-2" : "hover:bg-background ring-1 ring-black/5"}`}
                       >
+                        {locked && <ProLockBadge />}
                         <BusinessCard
                           design={d}
                           content={shown}
@@ -454,7 +479,7 @@ export function CardsWorkspace({
                         <span className="flex items-center justify-between px-1 pt-2.5 pb-0.5 text-sm">
                           <span className="font-medium">{d.label}</span>
                           <span className="text-muted-foreground text-xs">
-                            {active ? "Selected" : d.category}
+                            {active ? "Selected" : locked ? "PRO" : d.category}
                           </span>
                         </span>
                       </button>
@@ -497,6 +522,7 @@ export function CardsWorkspace({
             {message && (
               <span className={message.ok ? "text-success" : "text-danger"}>
                 {message.text}
+                {message.pro && <ProPlansLink from="cards" />}
               </span>
             )}
           </p>
@@ -612,7 +638,11 @@ function SharePanel({
   const [check, setCheck] = useState<{ state: SlugState; text?: string }>({
     state: "idle",
   });
-  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const [note, setNote] = useState<{
+    ok: boolean;
+    text: string;
+    pro?: boolean;
+  } | null>(null);
   const [pending, start] = useTransition();
   const [copied, setCopied] = useState(false);
   const live = status === "published";
@@ -635,10 +665,12 @@ function SharePanel({
     return () => clearTimeout(t);
   }, [value, slug]);
 
-  const run = (fn: () => Promise<{ ok: boolean; message: string }>) =>
+  const run = (
+    fn: () => Promise<{ ok: boolean; message: string; proRequired?: boolean }>,
+  ) =>
     start(async () => {
       const r = await fn();
-      setNote({ ok: r.ok, text: r.message });
+      setNote({ ok: r.ok, text: r.message, pro: r.proRequired });
     });
 
   return (
@@ -650,7 +682,7 @@ function SharePanel({
         </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
           <label className="flex min-w-0 flex-1 items-center overflow-hidden rounded-md border focus-within:ring-2 focus-within:ring-black/10">
-            <span className="text-muted-foreground bg-muted shrink-0 px-3 py-2.5 font-mono text-xs">
+            <span className="text-muted-foreground bg-muted shrink-0 px-3 py-2.5 font-mono text-xs whitespace-nowrap">
               {origin.replace(/^https?:\/\//, "")}/social/
             </span>
             <input
@@ -811,6 +843,7 @@ function SharePanel({
             className={`text-sm ${note.ok ? "text-success" : "text-danger"}`}
           >
             {note.text}
+            {note.pro && <ProPlansLink from="cards" />}
           </p>
         )}
       </div>

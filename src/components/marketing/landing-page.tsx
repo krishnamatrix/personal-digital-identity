@@ -4,6 +4,8 @@ import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { ThemeThumb } from "@/components/website/theme-thumb";
 import { THEMES, type ThemeId } from "@/domains/website/config";
+import { PricingPlans } from "@/components/billing/pricing-plans";
+import type { BillingCurrency } from "@/domains/billing/plans";
 
 const SHOWCASE: ThemeId[] = [
   "atelier",
@@ -43,7 +45,14 @@ const PRIVACY = [
 const label = (id: ThemeId) => THEMES.find((t) => t.id === id)?.label ?? id;
 
 /** Public landing page shown at / to visitors who are not signed in. */
-export function LandingPage() {
+export function LandingPage({
+  currency = "USD",
+  billingReady = false,
+}: {
+  /** Pricing currency for the visitor's location. */
+  currency?: BillingCurrency;
+  billingReady?: boolean;
+}) {
   return (
     <div className="bg-background text-foreground min-h-screen overflow-x-clip">
       <header className="mx-auto flex h-20 max-w-6xl items-center justify-between px-4 sm:px-6">
@@ -51,6 +60,9 @@ export function LandingPage() {
           <BrandMark />
         </Link>
         <nav aria-label="Account" className="flex items-center gap-2">
+          <Button asChild variant="ghost" size="sm">
+            <a href="#pricing">Pricing</a>
+          </Button>
           <Button asChild variant="ghost" size="sm">
             <Link href="/login">Sign in</Link>
           </Button>
@@ -201,6 +213,33 @@ export function LandingPage() {
                 </li>
               ))}
             </ul>
+          </div>
+        </section>
+
+        <section
+          id="pricing"
+          aria-labelledby="pricing-heading"
+          className="mx-auto max-w-4xl scroll-mt-8 px-4 pt-24 sm:px-6"
+        >
+          <div className="text-center">
+            <p className="eyebrow">Pricing</p>
+            <h2
+              id="pricing-heading"
+              className="font-display mt-4 text-3xl sm:text-4xl"
+            >
+              Start free. Upgrade when you want more.
+            </h2>
+            <p className="text-muted-foreground mx-auto mt-4 max-w-lg text-[15px]">
+              The essentials are free forever. PRO unlocks every website and
+              digital card design.
+            </p>
+          </div>
+          <div className="mt-12">
+            <PricingPlans
+              initialCurrency={currency}
+              billingReady={billingReady}
+              viewer={{ signedIn: false }}
+            />
           </div>
         </section>
 

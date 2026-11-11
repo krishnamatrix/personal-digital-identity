@@ -54,7 +54,11 @@ describe("workspace chrome", () => {
     render(
       <WorkspaceFrame viewer={{ name: "Priya Natarajan" }}>
         <Dashboard
-          viewer={{ name: "Priya Natarajan", headline: "Data lead" }}
+          viewer={{
+            name: "Priya Natarajan",
+            headline: "Data lead",
+            isPro: false,
+          }}
         />
       </WorkspaceFrame>,
     );

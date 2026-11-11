@@ -1,6 +1,7 @@
 import "server-only";
 import type { FolioneClient } from "@/lib/db/schema";
 import { AuthorizationError } from "@/lib/supabase/server";
+import { ProRequiredError } from "@/domains/billing/plans";
 import {
   normalizeConfig,
   type ThemeId,
@@ -29,6 +30,8 @@ export class WebsitePersistenceError extends Error {
 }
 
 function mapError(error: { code?: string }): Error {
+  // PT402: the M9 trigger refused a PRO design for a Free account.
+  if (error.code === "PT402") return new ProRequiredError();
   if (error.code === "23505") return new WebsiteSlugTakenError();
   if (error.code === "42501" || error.code === "PGRST301")
     return new AuthorizationError();

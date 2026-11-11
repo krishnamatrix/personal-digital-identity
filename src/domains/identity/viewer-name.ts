@@ -1,7 +1,12 @@
 /** Label shown in the workspace chrome when the signed-in person's name is not known. */
 export const WORKSPACE_FALLBACK_NAME = "Your workspace";
 
-export type Viewer = { name: string; headline: string | null };
+export type Viewer = {
+  name: string;
+  headline: string | null;
+  /** PRO plan active right now (shown as a superscript next to the name). */
+  isPro: boolean;
+};
 
 const clean = (v: unknown) =>
   typeof v === "string" && v.trim() ? v.trim() : null;

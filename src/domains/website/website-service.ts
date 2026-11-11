@@ -2,6 +2,8 @@ import "server-only";
 import { getAuthenticatedDb, getAnonymousDb } from "@/lib/db/query";
 import { createEmptyProfile, ensureAccount, findProfile } from "@/lib/db/query";
 import { listEntries, listPublishedArticles } from "@/lib/db/query";
+import { hasActivePro } from "@/domains/billing/billing-service";
+import { isProWebsiteTheme, ProRequiredError } from "@/domains/billing/plans";
 import { displayExcerpt } from "@/domains/articles/article-schema";
 import type { EntryItem, EntryKind } from "@/domains/identity/entry-kinds";
 import {
@@ -158,6 +160,12 @@ const draftSchema = z.object({
 export async function saveWebsiteDraft(input: unknown): Promise<void> {
   const { theme, config } = draftSchema.parse(input);
   const { client, user } = await getAuthenticatedDb();
+  if (isProWebsiteTheme(theme)) {
+    // Switching TO a PRO design needs PRO; keeping one chosen earlier does not (same rule as SQL).
+    const site = await findSite(client, user.id);
+    if (site?.theme !== theme && !(await hasActivePro(client, user.id)))
+      throw new ProRequiredError();
+  }
   await saveDraft(client, user.id, theme as ThemeId, normalizeConfig(config));
 }
 
@@ -176,6 +184,8 @@ export async function publishWebsite(): Promise<Date> {
   const content = buildPublishedContent(source, site.config);
   const problems = publishProblems(content);
   if (problems.length) throw new PublishBlockedError(problems);
+  if (isProWebsiteTheme(site.theme) && !(await hasActivePro(client, user.id)))
+    throw new ProRequiredError();
   const seo = defaultSeo(content);
   return publish(client, {
     theme: site.theme,

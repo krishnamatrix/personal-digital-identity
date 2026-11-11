@@ -75,7 +75,7 @@ function initials(name: string) {
 }
 
 export function Dashboard({
-  viewer = { name: WORKSPACE_FALLBACK_NAME, headline: null },
+  viewer = { name: WORKSPACE_FALLBACK_NAME, headline: null, isPro: false },
 }: {
   /** The signed-in person; their name heads the identity and preview cards. */
   viewer?: Viewer;

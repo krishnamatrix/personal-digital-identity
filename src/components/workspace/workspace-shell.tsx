@@ -6,7 +6,9 @@ import { getViewer } from "@/domains/identity/viewer";
 export async function WorkspaceShell({ children }: { children: ReactNode }) {
   const viewer = await getViewer();
   return (
-    <WorkspaceFrame viewer={viewer ? { name: viewer.name } : undefined}>
+    <WorkspaceFrame
+      viewer={viewer ? { name: viewer.name, isPro: viewer.isPro } : undefined}
+    >
       {children}
     </WorkspaceFrame>
   );

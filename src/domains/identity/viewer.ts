@@ -3,6 +3,8 @@ import { cache } from "react";
 import { unstable_rethrow } from "next/navigation";
 import { getAuthenticatedDb } from "@/lib/db/client";
 import { findProfile } from "@/lib/db/queries/identity";
+import { findPlan } from "@/lib/db/queries/billing";
+import { isProActive } from "@/domains/billing/plans";
 import { AuthenticationRequiredError } from "@/lib/supabase/server";
 import { logLoadError } from "@/lib/server-log";
 import { resolveViewerName, type Viewer } from "./viewer-name";
@@ -32,8 +34,17 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     unstable_rethrow(error);
     logLoadError("workspace-viewer", error);
   }
+  let isPro = false;
+  try {
+    isPro = isProActive(await findPlan(client, user.id));
+  } catch (error) {
+    // No plan table yet (M9 SQL not run) or a transient error: show the Free chrome.
+    unstable_rethrow(error);
+    logLoadError("workspace-viewer:plan", error);
+  }
   return {
     name: resolveViewerName(profile, user),
     headline: profile?.headline ?? null,
+    isPro,
   };
 });

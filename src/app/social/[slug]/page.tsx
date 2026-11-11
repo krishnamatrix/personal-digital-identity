@@ -5,7 +5,7 @@ import { UserPlus } from "lucide-react";
 import { BusinessCard } from "@/components/cards/business-card";
 import { CardWithQr } from "@/components/cards/card-with-qr";
 import { cardDesign } from "@/domains/cards/card-designs";
-import { cardVCard, shortUrl } from "@/domains/cards/card-content";
+import { cardVCard } from "@/domains/cards/card-content";
 import { getPublicCard } from "@/domains/cards/card-service";
 import { getSiteUrl } from "@/lib/site-url";
 
@@ -56,28 +56,9 @@ export default async function PublicCardPage({
   const vcf = `data:text/vcard;charset=utf-8,${encodeURIComponent(vcard)}`;
   const fileName = `${content.name.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || "contact"}.vcf`;
 
-  const rows = [
-    content.email && {
-      label: "Email",
-      text: content.email,
-      href: `mailto:${content.email}`,
-    },
-    content.phone && {
-      label: "Phone",
-      text: content.phone,
-      href: `tel:${content.phone.replace(/[^\d+]/g, "")}`,
-    },
-    ...content.links.map((l) => ({
-      label: l.label,
-      text: shortUrl(l.url),
-      href: l.url,
-    })),
-    content.location && { label: "Location", text: content.location },
-  ].filter(Boolean) as { label: string; text: string; href?: string }[];
-
   return (
     <main
-      className={`flex min-h-screen flex-col items-center px-4 py-10 sm:py-16 ${design.dark ? "bg-[#111113] text-white" : "bg-[#f0f0f2] text-[#1d1d1f]"}`}
+      className={`flex min-h-dvh flex-col items-center justify-center px-4 py-10 ${design.dark ? "bg-[#111113] text-white" : "bg-[#f0f0f2] text-[#1d1d1f]"}`}
     >
       <div className="w-full max-w-xl">
         <CardWithQr value={vcard} radius={design.radius}>
@@ -98,45 +79,6 @@ export default async function PublicCardPage({
             <UserPlus aria-hidden className="size-4" /> Save contact
           </a>
         </div>
-
-        {rows.length > 0 && (
-          <ul
-            className={`mt-8 divide-y overflow-hidden rounded-2xl ${design.dark ? "divide-white/10 bg-white/5" : "divide-black/5 bg-white"}`}
-          >
-            {rows.map((row) => {
-              const body = (
-                <>
-                  <span
-                    className={`text-xs tracking-wide uppercase ${design.dark ? "text-white/60" : "text-black/55"}`}
-                  >
-                    {row.label}
-                  </span>
-                  <span className="truncate text-[15px]">{row.text}</span>
-                </>
-              );
-              return (
-                <li key={row.label + row.text}>
-                  {row.href ? (
-                    <a
-                      href={row.href}
-                      target={
-                        row.href.startsWith("http") ? "_blank" : undefined
-                      }
-                      rel="noopener noreferrer me"
-                      className={`flex flex-col gap-0.5 px-5 py-3.5 ${design.dark ? "hover:bg-white/5" : "hover:bg-black/[.02]"}`}
-                    >
-                      {body}
-                    </a>
-                  ) : (
-                    <div className="flex flex-col gap-0.5 px-5 py-3.5">
-                      {body}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
 
         <p
           className={`mt-10 text-center text-xs ${design.dark ? "text-white/50" : "text-black/45"}`}
