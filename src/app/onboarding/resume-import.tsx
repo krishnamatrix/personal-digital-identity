@@ -179,7 +179,7 @@ export function ResumeImport({
       </div>
       <p className="text-muted-foreground text-xs leading-5">
         Your file is read once to fill in your profile and is not stored. Its
-        contents are processed by Anthropic’s Claude API.
+        contents are processed by Google’s Gemini API.
       </p>
     </section>
   );

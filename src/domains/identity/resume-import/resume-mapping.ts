@@ -77,7 +77,7 @@ const dedupeKey = (kind: EntryKind, data: EntryData) =>
     .trim();
 
 /**
- * Turns Claude's (untrusted) extraction into a safe import plan:
+ * Turns the model's (untrusted) extraction into a safe import plan:
  * - profile fields are applied only where the profile is empty, and only if they pass the
  *   profile schema on their own (an invalid email never blocks the name);
  * - entries are validated with the editor's own per-kind schema, appended after existing

@@ -2,10 +2,10 @@ import { z } from "zod";
 import { SOCIAL_PLATFORMS } from "@/domains/identity/entry-kinds";
 
 /**
- * Shape Claude must return when reading a resume (sent as the structured-output format).
+ * Shape the model must return when reading a resume (sent as the structured-output format).
  *
  * Deliberately loose: every field is required-but-nullable (what structured outputs needs)
- * and carries no length, URL or date constraints. Claude's output is untrusted input, so
+ * and carries no length, URL or date constraints. The model's output is untrusted input, so
  * the real rules are applied afterwards by `mapResumeToIdentity`, using the same Zod
  * schemas the profile editor uses. Field names match the entry-kind registry keys, so an
  * item maps onto a Master Identity entry without translation.

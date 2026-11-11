@@ -41,11 +41,7 @@ vi.mock("mammoth", () => ({
   default: { extractRawText: mocks.extractRawText },
 }));
 
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import {
-  resumeExtractionSchema,
-  type ResumeExtraction,
-} from "@/domains/identity/resume-import/resume-extraction-schema";
+import type { ResumeExtraction } from "@/domains/identity/resume-import/resume-extraction-schema";
 import { mapResumeToIdentity } from "@/domains/identity/resume-import/resume-mapping";
 import {
   readResumeFile,
@@ -223,20 +219,6 @@ describe("mapResumeToIdentity", () => {
   });
 });
 
-describe("resume extraction schema", () => {
-  it("converts to a strict structured-output JSON schema", () => {
-    const format = betaZodOutputFormat(resumeExtractionSchema);
-    const schema = format.schema as {
-      additionalProperties?: boolean;
-      required?: string[];
-    };
-    expect(schema.additionalProperties).toBe(false);
-    expect(schema.required).toEqual(
-      expect.arrayContaining(["isResume", "profile", "employment", "skill"]),
-    );
-  });
-});
-
 describe("readResumeFile", () => {
   const pdfBytes = new TextEncoder().encode("%PDF-1.7\n...");
   const zipBytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]);
@@ -292,7 +274,7 @@ describe("importResume", () => {
     mocks.extractResume.mockResolvedValue(extraction());
   });
 
-  it("verifies the session before reading the file or calling Claude", async () => {
+  it("verifies the session before reading the file or calling the model", async () => {
     mocks.createAuthenticatedClient.mockRejectedValue(new Error("signed out"));
     await expect(importResume(pdf())).rejects.toThrow("signed out");
     expect(mocks.extractResume).not.toHaveBeenCalled();

@@ -100,14 +100,16 @@ My Identity without a verified user.
 - **Flow:** `ResumeImport` (client) → `importResumeAction` → `importResume` service. The service verifies
   the session first (`getAuthenticatedDb`), so anonymous requests never read the file or call the API.
 - **File handling** (`resume-file.ts`): PDF or DOCX, 5 MB max, checked by extension **and** content
-  signature. A PDF is sent to Claude as a document block; a DOCX is reduced to text with `mammoth`.
+  signature. A PDF is sent to Gemini as inline data; a DOCX is reduced to text with `mammoth`.
   The file is never written to disk or storage. Server actions accept up to 6 MB (`next.config.ts`).
-- **Extraction** (`src/lib/ai/resume-extractor.ts`, the only Claude API call site): `claude-opus-5-5`,
-  low effort, structured output against `resumeExtractionSchema`, server-side refusal fallback. The
+- **Extraction** (`src/lib/ai/resume-extractor.ts`, the only LLM call site): Google Gemini
+  `gemini-3.5-flash-lite` via REST `generateContent` (plain fetch, no SDK, key in the `x-goog-api-key`
+  header), minimal thinking, JSON output against `resumeExtractionSchema` (converted to Gemini's
+  schema subset), with the reply re-parsed by the same Zod schema. The
   document is treated as data; the output is untrusted and re-validated.
 - **Merge rules** (`resume-mapping.ts`, pure and unit-tested): profile fields are filled only where the
   profile is empty, each validated on its own; list entries are validated with the editor's per-kind
   schema, appended after existing items, de-duplicated by title + subtitle and capped at the section
   maximum. Nothing the person entered is overwritten or deleted.
-- **Configuration:** `ANTHROPIC_API_KEY` (server-only). Unset, the import is hidden and onboarding is
+- **Configuration:** `GEMINI_API_KEY` (server-only). Unset, the import is hidden and onboarding is
   unchanged. Depends on the M4 SQL (`identity_entries` and the expanded profile columns).

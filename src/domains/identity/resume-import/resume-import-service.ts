@@ -35,7 +35,7 @@ export type ResumeImportResult = {
 /**
  * Reads a resume and adds what it contains to the signed-in person's Master Identity.
  *
- * The session is verified BEFORE the file is read or sent to Claude, so anonymous requests
+ * The session is verified BEFORE the file is read or sent to Gemini, so anonymous requests
  * cost nothing. Existing data always wins: only empty profile fields are filled, and list
  * entries are appended (de-duplicated), never replaced. The file itself is not stored.
  */

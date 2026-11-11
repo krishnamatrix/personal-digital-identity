@@ -92,7 +92,7 @@ export function OnboardingFlow({
 }: {
   initialStep: number;
   values: Values;
-  /** Show "Start from your resume" on the first step (needs the Claude API configured). */
+  /** Show "Start from your resume" on the first step (needs the Gemini API configured). */
   resumeImportEnabled?: boolean;
 }) {
   const [step, setStep] = useState(
