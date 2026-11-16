@@ -1,6 +1,11 @@
 import type { FolioneClient } from "@/lib/db/schema";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { findProfile, updateProfile } from "@/lib/db/queries/identity";
+import {
+  findProfile,
+  findViewerProfile,
+  ProfilePersistenceError,
+  updateProfile,
+} from "@/lib/db/queries/identity";
 import { AuthorizationError } from "@/lib/supabase/server";
 
 const verifiedUserId = "0f00b3c8-7ea4-42ad-a544-4d62d1a42f54";
@@ -76,5 +81,95 @@ describe("identity profile repository", () => {
     await expect(findProfile(client, verifiedUserId)).rejects.toBeInstanceOf(
       AuthorizationError,
     );
+  });
+});
+
+describe("workspace viewer profile projection", () => {
+  it("loads only viewer fields with the verified owner filter", async () => {
+    const { client, query } = makeQuery({
+      display_name: "Priya",
+      full_name: "Priya Natarajan",
+      headline: "Builder",
+    });
+    await expect(findViewerProfile(client, verifiedUserId)).resolves.toEqual({
+      displayName: "Priya",
+      fullName: "Priya Natarajan",
+      headline: "Builder",
+    });
+    expect(query.select).toHaveBeenCalledExactlyOnceWith(
+      "display_name,full_name,headline",
+    );
+    expect(query.eq).toHaveBeenCalledExactlyOnceWith(
+      "account_id",
+      verifiedUserId,
+    );
+  });
+
+  it.each(["42703", "PGRST204"])(
+    "recovers %s once with baseline viewer columns and the same owner",
+    async (code) => {
+      const { client, query } = makeQuery();
+      query.maybeSingle
+        .mockResolvedValueOnce({ data: null, error: { code } })
+        .mockResolvedValueOnce({
+          data: { display_name: "Priya", headline: null },
+          error: null,
+        });
+      await expect(findViewerProfile(client, verifiedUserId)).resolves.toEqual({
+        displayName: "Priya",
+        fullName: null,
+        headline: null,
+      });
+      expect(query.select.mock.calls).toEqual([
+        ["display_name,full_name,headline"],
+        ["display_name,headline"],
+      ]);
+      expect(query.eq.mock.calls).toEqual([
+        ["account_id", verifiedUserId],
+        ["account_id", verifiedUserId],
+      ]);
+    },
+  );
+
+  it("returns null for a missing profile without attempting to create it", async () => {
+    const { client, query } = makeQuery();
+    await expect(findViewerProfile(client, verifiedUserId)).resolves.toBeNull();
+    expect(client.from).toHaveBeenCalledTimes(1);
+    expect(query.update).not.toHaveBeenCalled();
+  });
+
+  it.each(["42501", "PGRST301", "42P01", "08006"])(
+    "does not retry or swallow %s",
+    async (code) => {
+      const { client, query } = makeQuery(null, { code });
+      await expect(
+        findViewerProfile(client, verifiedUserId),
+      ).rejects.toBeInstanceOf(
+        code === "42501" || code === "PGRST301"
+          ? AuthorizationError
+          : ProfilePersistenceError,
+      );
+      expect(query.maybeSingle).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("surfaces a failed compatibility retry without retrying again", async () => {
+    const { client, query } = makeQuery(null, { code: "42703" });
+    await expect(
+      findViewerProfile(client, verifiedUserId),
+    ).rejects.toMatchObject({
+      name: "ProfilePersistenceError",
+      code: "42703",
+    });
+    expect(query.maybeSingle).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps full profile reads strict when expanded columns are missing", async () => {
+    const { client, query } = makeQuery(null, { code: "42703" });
+    await expect(findProfile(client, verifiedUserId)).rejects.toMatchObject({
+      name: "ProfilePersistenceError",
+      code: "42703",
+    });
+    expect(query.maybeSingle).toHaveBeenCalledTimes(1);
   });
 });
