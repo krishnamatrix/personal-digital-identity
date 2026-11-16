@@ -1,9 +1,12 @@
 import "server-only";
 import { cache } from "react";
 import { unstable_rethrow } from "next/navigation";
-import { getAuthenticatedDb } from "@/lib/db/client";
-import { findProfile } from "@/lib/db/queries/identity";
-import { findPlan } from "@/lib/db/queries/billing";
+import {
+  getAuthenticatedDb,
+  findPlan,
+  findViewerProfile,
+  BillingPersistenceError,
+} from "@/lib/db/query";
 import { isProActive } from "@/domains/billing/plans";
 import { AuthenticationRequiredError } from "@/lib/supabase/server";
 import { logLoadError } from "@/lib/server-log";
@@ -29,7 +32,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   const { client, user } = session;
   let profile = null;
   try {
-    profile = await findProfile(client, user.id);
+    profile = await findViewerProfile(client, user.id);
   } catch (error) {
     unstable_rethrow(error);
     logLoadError("workspace-viewer", error);
@@ -38,9 +41,16 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   try {
     isPro = isProActive(await findPlan(client, user.id));
   } catch (error) {
-    // No plan table yet (M9 SQL not run) or a transient error: show the Free chrome.
     unstable_rethrow(error);
-    logLoadError("workspace-viewer:plan", error);
+    // Billing is optional for workspace chrome before M9 is provisioned. Missing
+    // tables (including a stale PostgREST table cache) keep the Free display;
+    // entitlement checks and payment flows still fail normally in the billing layer.
+    if (
+      !(error instanceof BillingPersistenceError) ||
+      (error.code !== "PGRST205" && error.code !== "42P01")
+    ) {
+      logLoadError("workspace-viewer:plan", error);
+    }
   }
   return {
     name: resolveViewerName(profile, user),

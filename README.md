@@ -21,6 +21,8 @@ Run `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm build
 
 GitHub Spec Kit is configured for Codex with project-local skills, a Folioone constitution, and feature templates. Start with `$speckit-specify <feature description>` in Codex chat, then clarify, plan, generate tasks, analyze, and implement. See [the workflow guide](specs/README.md) for commands, feature selection, and validation requirements.
 
+The [product requirements](specs/product-requirements.md) consolidate identity, Personas, publishing, articles, cards, media, import, and PRO behavior with acceptance scenarios, future scope, and unresolved decisions. This draft distinguishes product requirements from verified deployment status.
+
 ## Environment
 
 `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` configure the browser-safe Supabase project and Auth client. User-owned requests use a verified server-side Supabase session and its authenticated PostgREST client. The application does not require a PostgreSQL connection string. Administrative `postgres` credentials are only for developer-controlled SQL Editor DDL and must never enter application environment or runtime code. No service-role key is used.

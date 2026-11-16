@@ -2,6 +2,8 @@
 
 **Input**: This feature's spec.md and plan.md; research, contracts, and data-model only when relevant.
 
+**Product traceability**: Carry applicable stable IDs from `specs/product-requirements.md` through each story's tasks and acceptance evidence. Resolve affected source conflicts and decisions before dependent work. Keep planned capabilities and unverified environment claims explicit.
+
 Use `- [ ] T001 [US1] Description (FR-001) in exact/path`. `[P]` indicates independent work only; it does not authorize spawning agents. Use sequential task IDs, real repository paths, explicit dependencies, and requirement/scenario references. Replace all examples and placeholders with actual work.
 
 ## Setup and dependencies

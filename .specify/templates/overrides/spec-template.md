@@ -16,6 +16,12 @@
 
 **Existing evidence**: [Relevant architecture/milestone records and current code paths; distinguish historical claims from verified state]
 
+**Product requirement references**: [Applicable stable IDs from specs/product-requirements.md; identify any new requirements and their source]
+
+**Scope classification**: [Baseline behavior / planned capability / proposed change; distinguish specification from environment verification]
+
+**Decisions affected**: [Applicable D-001–D-009 or other unresolved source conflicts; resolve before dependent implementation]
+
 ## User Scenarios & Testing (mandatory)
 
 ### User Story 1 - [Journey] (Priority: P1)

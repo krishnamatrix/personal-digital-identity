@@ -2,6 +2,8 @@
 
 Folioone uses [GitHub Spec Kit](https://github.com/github/spec-kit) with Codex skills. Describe the expected outcome before implementation; keep the specification, plan, tasks, and delivered behavior aligned in the same change.
 
+Start with the [product requirements](product-requirements.md), a consolidated draft baseline with stable domain requirement IDs, acceptance scenarios, planned scope, and decisions needing resolution. Feature specs link applicable IDs; they do not assume that documented behavior is verified in the current environment. The constitution's six principles govern how this baseline becomes scoped, tested work.
+
 ## Start in Codex chat
 
 Open this repository in a fresh Codex chat to discover the project-local skills in `.agents/skills/`. These are chat commands, not terminal commands. If skill discovery has not refreshed, ask Codex to read the corresponding `SKILL.md` directly.

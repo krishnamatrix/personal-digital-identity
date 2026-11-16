@@ -27,6 +27,7 @@ Read `.specify/memory/constitution.md` before design and recheck after design. F
 - [ ] III: Authentication, ownership, private data, and public publication boundaries are addressed.
 - [ ] IV: SQL proposals and execution evidence are separate; restricted actions are identified.
 - [ ] V: Requirements map to meaningful tests and actual verification commands.
+- [ ] VI: Product requirement IDs, delivery classification, source conflicts, and dependent decisions are explicit; planned capabilities are not claimed as implemented.
 
 ## Existing evidence and decisions
 
@@ -42,9 +43,9 @@ Read `.specify/memory/constitution.md` before design and recheck after design. F
 
 ## Validation and requirement mapping
 
-| Requirement / scenario  | Implementation paths | Test or manual check             | Command and authorization needed |
-| ----------------------- | -------------------- | -------------------------------- | -------------------------------- |
-| FR-001 / US1 scenario 1 | [Paths]              | [Meaningful observable behavior] | [Command]                        |
+| Product requirement / feature scenario | Implementation paths | Test or manual check             | Command and authorization needed |
+| -------------------------------------- | -------------------- | -------------------------------- | -------------------------------- |
+| [Product ID] / FR-001 / US1 scenario 1 | [Paths]              | [Meaningful observable behavior] | [Command]                        |
 
 Include applicable typecheck, lint, formatting, unit, and database-boundary checks. Identify any database/browser/hosted validation requiring separate authorization. Never mark unrun checks as passing.
 

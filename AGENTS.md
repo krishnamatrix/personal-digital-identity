@@ -4,6 +4,8 @@ Folioone is a personal digital identity workspace: one canonical Master Identity
 
 ## Spec-Driven Development
 
+Use `specs/product-requirements.md` as the consolidated draft product baseline. Feature specs reference its stable requirement IDs and distinguish baseline, planned, and proposed scope. Resolve applicable source conflicts/decision IDs before dependent implementation; do not infer deployed capability from requirements or historical milestone status.
+
 Use GitHub Spec Kit for new features and meaningful behavior changes. Read `.specify/memory/constitution.md` and the relevant existing architecture records first. Follow `specs/README.md`: specify → clarify → plan → tasks → analyze → implement. Store feature artifacts in `specs/NNN-short-name/`; use the project templates in `.specify/templates/overrides/`. Keep requirements, tasks, acceptance tests, and verification evidence linked and current. Small fixes and documentation maintenance can update an existing spec without creating a new one.
 
 Codex skills live in `.agents/skills/speckit-*/`. Preserve an explicitly requested branch name; feature directories and Git branches are independent. Set `SPECIFY_FEATURE_DIRECTORY=specs/NNN-short-name` when selecting a feature explicitly, or use the local `.specify/feature.json` pointer written by the specify skill. Do not infer implementation authorization from a request to write a spec or plan. Existing database execution and hosted-test restrictions below still apply.
