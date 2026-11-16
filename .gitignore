@@ -17,4 +17,3 @@ graphify-out/
 .validate/
 playwright-report/
 test-results/
-supabase/
