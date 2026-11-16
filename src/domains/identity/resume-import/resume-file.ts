@@ -24,7 +24,7 @@ const ZIP_MAGIC = [0x50, 0x4b, 0x03, 0x04]; // "PK\x03\x04" (DOCX is a zip)
 
 /**
  * Checks the upload by size, name AND content signature (the browser-supplied MIME type is
- * not trusted), then prepares it for the configured AI: PDF bytes are passed inline, a DOCX
+ * not trusted), then prepares it for Gemini: a PDF is passed through as inline data, a DOCX
  * is reduced to plain text. Nothing is written to disk or storage.
  */
 export async function readResumeFile(file: File): Promise<ResumeDocument> {
