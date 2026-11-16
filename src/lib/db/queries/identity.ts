@@ -12,51 +12,6 @@ const PROFILE_COLUMNS =
 
 type QueryClient = FolioneClient;
 
-const viewerProfileSchema = profileSchema.pick({
-  displayName: true,
-  fullName: true,
-  headline: true,
-});
-
-export type ViewerProfile = Pick<
-  IdentityProfile,
-  "displayName" | "fullName" | "headline"
->;
-
-/**
- * Workspace chrome must not depend on the full M4 onboarding/contact schema.
- * Preserve the saved full name on upgraded schemas; on a missing-column error,
- * try the baseline fields once. This compatibility read never creates a profile
- * or relaxes the schema requirements for profile editing.
- */
-export async function findViewerProfile(
-  client: QueryClient,
-  verifiedUserId: string,
-): Promise<ViewerProfile | null> {
-  let { data, error } = await client
-    .from("identity_profiles")
-    .select("display_name,full_name,headline")
-    .eq("account_id", verifiedUserId)
-    .maybeSingle();
-
-  if (error?.code === "42703" || error?.code === "PGRST204") {
-    ({ data, error } = await client
-      .from("identity_profiles")
-      .select("display_name,headline")
-      .eq("account_id", verifiedUserId)
-      .maybeSingle());
-  }
-
-  if (error) throw mapProfileError(error);
-  return data
-    ? viewerProfileSchema.parse({
-        displayName: data.display_name,
-        fullName: data.full_name ?? null,
-        headline: data.headline,
-      })
-    : null;
-}
-
 export class ProfilePersistenceError extends Error {
   /** PostgREST / Postgres error code, kept for logs only (never shown to users). */
   readonly code?: string;
