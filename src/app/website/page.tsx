@@ -25,6 +25,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const SECTION_KIND: Partial<Record<SectionId, EntryKind>> = {
+  featured: "featured_post",
   experience: "employment",
   education: "education",
   skills: "skill",

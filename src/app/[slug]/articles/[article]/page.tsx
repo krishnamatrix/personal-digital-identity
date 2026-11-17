@@ -7,6 +7,8 @@ import { getPublicSite } from "@/domains/website/website-service";
 import { getPublicArticle } from "@/domains/articles/article-service";
 import { deriveExcerpt } from "@/domains/articles/rich-text";
 import { themeColors, type ThemeId } from "@/domains/website/config";
+import { publicIdFor } from "@/domains/insights/insights-service";
+import { PageTracker } from "@/components/insights/page-tracker";
 
 // Unpublishing must take effect immediately: never cache this route.
 export const dynamic = "force-dynamic";
@@ -82,6 +84,7 @@ export default async function PublicArticlePage({
   const found = await load(slug, articleSlug);
   if (!found) notFound();
   const { site, article } = found;
+  const trackId = await publicIdFor("website", site.slug);
   return (
     <div
       className={`min-h-screen ${SHELL[site.theme] ?? ""}`}
@@ -114,6 +117,7 @@ export default async function PublicArticlePage({
           Folioone
         </a>
       </footer>
+      {trackId && <PageTracker surface="website" id={trackId} />}
     </div>
   );
 }

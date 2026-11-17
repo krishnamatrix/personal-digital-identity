@@ -73,7 +73,7 @@ export function ProfileFieldsForm({
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={pending || !dirty}>
+        <Button pending={pending} type="submit" disabled={pending || !dirty}>
           {pending ? "Saving…" : def.saveLabel}
         </Button>
         <Button

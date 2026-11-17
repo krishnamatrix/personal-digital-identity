@@ -68,7 +68,12 @@ export function SignupForm() {
           {state.message}
         </p>
       )}
-      <Button className="w-full" disabled={pending} type="submit">
+      <Button
+        pending={pending}
+        className="w-full"
+        disabled={pending}
+        type="submit"
+      >
         {pending ? "Creating account…" : "Create account"}
       </Button>
       <p className="text-muted-foreground text-center text-sm">

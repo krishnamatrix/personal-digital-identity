@@ -149,6 +149,7 @@ export function AddressEditor({
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button
+          pending={pending}
           type="button"
           disabled={pending || blocked}
           onClick={() => (published && slug ? setConfirming(true) : save())}

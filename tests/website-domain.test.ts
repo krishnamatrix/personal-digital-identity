@@ -172,15 +172,29 @@ describe("config", () => {
         { id: "skills", visible: true },
       ],
     });
+    // Missing sections go to their default position relative to the ones kept.
     expect(repaired.sections.map((s) => s.id)).toEqual([
       "intro",
+      "about",
+      "featured",
+      "experience",
+      "education",
       "skills",
-      ...SECTION_IDS.filter((s) => s !== "intro" && s !== "skills"),
+      ...SECTION_IDS.slice(SECTION_IDS.indexOf("skills") + 1),
     ]);
     expect(repaired.sections.find((s) => s.id === "skills")!.visible).toBe(
       false,
     );
     expect(normalizeConfig("garbage")).toEqual(defaultConfig());
+    // A config saved before "featured" existed gets it right after "about".
+    const old = defaultConfig().sections.filter((x) => x.id !== "featured");
+    const upgraded = normalizeConfig({
+      ...defaultConfig(),
+      sections: [...old].reverse(),
+    });
+    const ids = upgraded.sections.map((x) => x.id);
+    expect(ids[0]).toBe("intro");
+    expect(ids.indexOf("featured")).toBe(ids.indexOf("about") + 1);
     expect(normalizeConfig({ excludedEntryIds: ["nope"] })).toEqual(
       defaultConfig(),
     );

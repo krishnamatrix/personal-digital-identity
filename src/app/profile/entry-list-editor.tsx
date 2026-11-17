@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FieldControl, type FieldValue } from "@/app/profile/field-controls";
 import { saveEntriesAction } from "@/app/profile/actions";
+import { fetchLinkPreviewAction } from "@/app/profile/link-preview-actions";
 import {
   cleanEntryData,
   ENTRY_KIND_DEFS,
@@ -49,7 +50,46 @@ export function EntryListEditor({
     null,
   );
   const [pending, startTransition] = useTransition();
+  const [filling, startFill] = useTransition();
+  const [fillNote, setFillNote] = useState<string | null>(null);
   const dirty = JSON.stringify(items) !== baseline;
+
+  /** Featured posts: fetch title / summary / image / date from the link (only empty fields). */
+  function fillFromLink() {
+    const url = draft?.item.data.url;
+    if (typeof url !== "string" || !/^https:\/\/\S+$/.test(url)) {
+      setFillNote("Paste a full https link first.");
+      return;
+    }
+    setFillNote(null);
+    startFill(async () => {
+      const result = await fetchLinkPreviewAction(url);
+      if (!result.ok) {
+        setFillNote(result.message);
+        return;
+      }
+      const p = result.preview;
+      setDraft((d) => {
+        if (!d) return d;
+        const data = { ...d.item.data };
+        const fill = (key: string, value: string | undefined) => {
+          if (value && !(typeof data[key] === "string" && data[key]))
+            data[key] = value;
+        };
+        fill("title", p.title);
+        fill("summary", p.summary);
+        fill("thumbnailUrl", p.thumbnailUrl);
+        fill("date", p.date);
+        fill("mediaType", p.mediaType);
+        return { ...d, item: { ...d.item, data } };
+      });
+      setFillNote(
+        p.title || p.thumbnailUrl
+          ? "Details filled in. Check them before saving."
+          : "Nothing found on that page. Fill the details in yourself.",
+      );
+    });
+  }
 
   useEffect(() => onDirtyChange(kind, dirty), [kind, dirty, onDirtyChange]);
 
@@ -64,6 +104,7 @@ export function EntryListEditor({
 
   function startAdd() {
     setStatus(null);
+    setFillNote(null);
     setDraftErrors({});
     setDraft({
       isNew: true,
@@ -289,6 +330,25 @@ export function EntryListEditor({
               </div>
             ))}
           </div>
+          {kind === "featured_post" && (
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                pending={filling}
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={filling}
+                onClick={fillFromLink}
+              >
+                {filling ? "Reading the link…" : "Fill from link"}
+              </Button>
+              {fillNote && (
+                <p className="text-muted-foreground text-xs" role="status">
+                  {fillNote}
+                </p>
+              )}
+            </div>
+          )}
           <div className="flex gap-2">
             <Button type="button" size="sm" onClick={commitDraft}>
               {draft.isNew ? `Add ${def.singular}` : "Update"}
@@ -310,6 +370,7 @@ export function EntryListEditor({
 
       <div className="flex flex-wrap items-center gap-3">
         <Button
+          pending={pending}
           type="button"
           onClick={save}
           disabled={pending || !dirty || !!draft}
@@ -317,6 +378,7 @@ export function EntryListEditor({
           {pending ? "Saving…" : `Save ${def.label.toLowerCase()}`}
         </Button>
         <Button
+          pending={pending}
           type="button"
           variant="outline"
           disabled={pending || !dirty}

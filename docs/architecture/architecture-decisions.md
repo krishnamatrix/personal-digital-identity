@@ -106,3 +106,15 @@ delete; there is no UPDATE policy, so objects are never overwritten. All calls u
 **Why.** AD-005: nothing becomes public by editing. A single public bucket would expose every uploaded photo before its owner
 published anything; one copy per surface lets the website and card show different photos and be unpublished separately.
 **Details.** `m10-profile-media.md`, `docs/sql/milestone-10/`.
+
+## AD-013: Insights are anonymous events written by anon to live pages only, read only by the owner
+
+**Decision.** Published websites and cards get a random, stable `public_id`. Visitors' browsers send beacons to
+`/api/pulse`; the server validates them and inserts into `folioone.insight_events` with the **anon** client. RLS lets anon
+insert only for a page that is live right now and only into bounded columns (not `id` or `occurred_at`); only the page's
+owner can read its events. No IP, cookie, full user agent or full referrer is stored; unique visitors use a hash with a
+daily, memory-only salt.
+**Why.** Event recording without a service-role key or a second SECURITY DEFINER function (AD-004, AD-011), without
+exposing `account_id`, and without identifying visitors (GDPR / DPDP). The cost: anyone with the public anon key can add
+events to a live page, so counts can be inflated; accepted for a personal dashboard.
+**Details.** `m11-featured-and-insights.md`, `docs/sql/milestone-11/`.

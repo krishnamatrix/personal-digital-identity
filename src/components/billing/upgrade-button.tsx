@@ -2,7 +2,6 @@
 
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   confirmPaymentAction,
@@ -135,11 +134,9 @@ export function UpgradeButton({
         type="button"
         onClick={upgrade}
         disabled={state !== "idle"}
+        busy={state !== "idle"}
         className={className}
       >
-        {state !== "idle" && (
-          <Loader2 aria-hidden className="size-4 animate-spin" />
-        )}
         {state === "confirming" ? "Confirming payment…" : children}
       </Button>
       {error && (

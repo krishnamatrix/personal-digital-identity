@@ -8,6 +8,8 @@ import { cardDesign } from "@/domains/cards/card-designs";
 import { cardVCard } from "@/domains/cards/card-content";
 import { getPublicCard } from "@/domains/cards/card-service";
 import { getSiteUrl } from "@/lib/site-url";
+import { publicIdFor } from "@/domains/insights/insights-service";
+import { PageTracker } from "@/components/insights/page-tracker";
 
 // Unpublishing must take effect immediately: never cache this route.
 export const dynamic = "force-dynamic";
@@ -54,6 +56,7 @@ export default async function PublicCardPage({
   const url = `${await getSiteUrl()}/social/${card.slug}`;
   const vcard = cardVCard(content, url);
   const vcf = `data:text/vcard;charset=utf-8,${encodeURIComponent(vcard)}`;
+  const trackId = await publicIdFor("card", card.slug);
   const fileName = `${content.name.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || "contact"}.vcf`;
 
   return (
@@ -74,6 +77,8 @@ export default async function PublicCardPage({
           <a
             href={vcf}
             download={fileName}
+            data-track-event="vcard_save"
+            data-track-label="Save contact"
             className={`inline-flex h-11 items-center gap-2 rounded-full px-6 text-sm font-medium ${design.dark ? "bg-white text-[#111]" : "bg-[#1d1d1f] text-white"}`}
           >
             <UserPlus aria-hidden className="size-4" /> Save contact
@@ -89,6 +94,7 @@ export default async function PublicCardPage({
           </Link>
         </p>
       </div>
+      {trackId && <PageTracker surface="card" id={trackId} />}
     </main>
   );
 }

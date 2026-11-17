@@ -46,6 +46,16 @@ export const SOCIAL_PLATFORMS = [
   { value: "custom", label: "Custom URL" },
 ] as const;
 
+/** What a featured piece is (drives the label and call to action on the website). */
+export const FEATURED_MEDIA_TYPES = [
+  { value: "post", label: "Post" },
+  { value: "video", label: "Video" },
+  { value: "article", label: "Article" },
+  { value: "podcast", label: "Podcast" },
+  { value: "talk", label: "Talk" },
+  { value: "other", label: "Other" },
+] as const;
+
 export const ENTRY_KINDS = [
   "employment",
   "education",
@@ -56,6 +66,7 @@ export const ENTRY_KINDS = [
   "certification",
   "language",
   "interest",
+  "featured_post",
 ] as const;
 export type EntryKind = (typeof ENTRY_KINDS)[number];
 
@@ -318,6 +329,54 @@ export const ENTRY_KIND_DEFS: Record<EntryKind, EntryKindDef> = {
       },
     ],
   },
+  featured_post: {
+    kind: "featured_post",
+    label: "Featured posts",
+    singular: "featured item",
+    titleKey: "title",
+    subtitleKeys: ["mediaType", "date"],
+    maxItems: 24,
+    visibility: true,
+    emptyTitle: "Nothing featured yet",
+    emptyHint:
+      "Add your best posts, videos, articles, podcasts or talks from anywhere on the web.",
+    fields: [
+      {
+        key: "url",
+        label: "Link",
+        type: "url",
+        required: true,
+        placeholder: "https://www.linkedin.com/posts/…",
+        help: "Paste the link, then use “Fill from link” to fetch the title and image.",
+      },
+      { key: "title", label: "Title", type: "text", required: true, max: 200 },
+      {
+        key: "mediaType",
+        label: "Type",
+        type: "select",
+        options: FEATURED_MEDIA_TYPES,
+      },
+      { key: "date", label: "Published", type: "month" },
+      {
+        key: "summary",
+        label: "Why it matters",
+        type: "textarea",
+        max: 400,
+        placeholder: "One or two lines on what it is about or how it landed.",
+      },
+      {
+        key: "thumbnailUrl",
+        label: "Image URL",
+        type: "url",
+        help: "Optional. Filled from the link when available; YouTube images are automatic.",
+      },
+      {
+        key: "headline",
+        label: "Headline item (shown large at the top)",
+        type: "checkbox",
+      },
+    ],
+  },
 };
 
 /** UI sections. Profile-column groups ("personal", "professional") are defined in the editor. */
@@ -327,6 +386,7 @@ export const LIST_SECTIONS = {
   skills: ["skill"],
   projects: ["project"],
   social: ["social_link"],
+  featured: ["featured_post"],
   additional: ["achievement", "certification", "language", "interest"],
 } as const satisfies Record<string, readonly EntryKind[]>;
 

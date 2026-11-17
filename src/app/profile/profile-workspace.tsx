@@ -24,6 +24,7 @@ type SectionId =
   | "skills"
   | "projects"
   | "social"
+  | "featured"
   | "additional"
   | "preview";
 
@@ -53,6 +54,12 @@ const SECTIONS: { id: SectionId; label: string; blurb: string }[] = [
     id: "social",
     label: "Social & Web",
     blurb: "Your profiles around the web, by URL.",
+  },
+  {
+    id: "featured",
+    label: "Featured",
+    blurb:
+      "Your best posts, videos, articles and talks. Pick which ones appear on your website.",
   },
   {
     id: "additional",
@@ -275,6 +282,9 @@ export function ProfileWorkspace({
           </div>
           <div hidden={active !== "social"}>
             {listEditor("social_link", false)}
+          </div>
+          <div hidden={active !== "featured"}>
+            {listEditor("featured_post", false)}
           </div>
           <div hidden={active !== "additional"} className="space-y-10">
             {LIST_SECTIONS.additional.map((k) => listEditor(k))}

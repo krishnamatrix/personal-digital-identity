@@ -14,6 +14,7 @@ import {
   type ListFilter,
 } from "@/domains/articles/article-schema";
 import { createArticleAction } from "@/app/articles/actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -108,9 +109,9 @@ export default async function ArticlesPage({
             </p>
           </div>
           <form action={createArticleAction}>
-            <Button type="submit" variant="accent">
+            <SubmitButton variant="accent">
               <Plus className="size-4" aria-hidden /> New Article
-            </Button>
+            </SubmitButton>
           </form>
         </header>
 
@@ -222,9 +223,7 @@ export default async function ArticlesPage({
                   until you publish it and choose to feature it on your website.
                 </p>
                 <form action={createArticleAction} className="mt-5">
-                  <Button type="submit" variant="accent">
-                    New Article
-                  </Button>
+                  <SubmitButton variant="accent">New Article</SubmitButton>
                 </form>
               </>
             )}

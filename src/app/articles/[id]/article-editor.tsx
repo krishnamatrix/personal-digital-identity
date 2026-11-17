@@ -454,6 +454,7 @@ export function ArticleEditor({ initial }: { initial: EditorArticle }) {
           </div>
           {!locked && (
             <Button
+              pending={busy}
               size="sm"
               variant="outline"
               disabled={busy || saveState === "saving" || saveState === "saved"}
@@ -464,6 +465,7 @@ export function ArticleEditor({ initial }: { initial: EditorArticle }) {
           )}
           {status === "draft" && (
             <Button
+              pending={busy}
               size="sm"
               variant="accent"
               disabled={busy}
@@ -474,6 +476,7 @@ export function ArticleEditor({ initial }: { initial: EditorArticle }) {
           )}
           {status === "published" && (
             <Button
+              pending={busy}
               size="sm"
               variant="outline"
               disabled={busy}
@@ -484,6 +487,7 @@ export function ArticleEditor({ initial }: { initial: EditorArticle }) {
           )}
           {status === "archived" ? (
             <Button
+              pending={busy}
               size="sm"
               variant="outline"
               disabled={busy}
@@ -493,6 +497,7 @@ export function ArticleEditor({ initial }: { initial: EditorArticle }) {
             </Button>
           ) : (
             <Button
+              pending={busy}
               size="sm"
               variant="outline"
               disabled={busy}
@@ -502,6 +507,7 @@ export function ArticleEditor({ initial }: { initial: EditorArticle }) {
             </Button>
           )}
           <Button
+            pending={busy}
             size="sm"
             variant="destructive-outline"
             disabled={busy}

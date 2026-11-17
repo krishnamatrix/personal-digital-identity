@@ -14,6 +14,22 @@ import type {
   PublishedContent,
   PublishedSection,
 } from "@/domains/website/published-content";
+import {
+  detectPlatform,
+  guessMediaType,
+  youtubeThumbnail,
+  youtubeVideoId,
+  type FeaturedMediaType,
+} from "@/domains/featured/featured-link";
+
+const MEDIA_TYPES: readonly FeaturedMediaType[] = [
+  "post",
+  "video",
+  "article",
+  "podcast",
+  "talk",
+  "other",
+];
 
 /** The slice of My Identity the website may read. Nothing else can reach the public site. */
 export type IdentitySource = {
@@ -147,6 +163,44 @@ export function buildPublishedContent(
         .slice(0, 4);
       return paragraphs.length
         ? { id: "about", heading: heading("about"), paragraphs }
+        : null;
+    },
+    featured: () => {
+      const items = included(entries, "featured_post", config).flatMap((e) => {
+        const link = url(str(e.data, "url"));
+        const title = str(e.data, "title");
+        if (!link || !title) return [];
+        const platform = detectPlatform(link);
+        const youtubeId = youtubeVideoId(link) ?? undefined;
+        const chosen = str(e.data, "mediaType") as
+          | FeaturedMediaType
+          | undefined;
+        return [
+          compact({
+            title: title.slice(0, 200),
+            url: link,
+            platform: platform.id,
+            platformLabel: platform.label.slice(0, 60),
+            mediaType:
+              chosen && MEDIA_TYPES.includes(chosen)
+                ? chosen
+                : guessMediaType(link),
+            date: str(e.data, "date"),
+            summary: str(e.data, "summary")?.slice(0, 400),
+            thumbnailUrl:
+              url(str(e.data, "thumbnailUrl")) ??
+              (youtubeId ? youtubeThumbnail(youtubeId) : undefined),
+            youtubeId,
+            headline: e.data.headline === true ? true : undefined,
+          }),
+        ];
+      });
+      return items.length
+        ? {
+            id: "featured",
+            heading: heading("featured"),
+            items: items.slice(0, 24),
+          }
         : null;
     },
     experience: () => {

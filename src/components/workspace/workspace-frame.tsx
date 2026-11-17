@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import {
+  BarChart3,
   ChevronDown,
   Globe,
   Home,
@@ -11,6 +12,7 @@ import {
   Link2,
   Menu,
   PenLine,
+  Star,
   UserRound,
   UsersRound,
   X,
@@ -48,11 +50,17 @@ const groups = [
     links: [
       { label: "My Website", href: "/website", icon: Globe },
       { label: "Digital Cards", href: "/cards", icon: IdCard },
+      { label: "Insights", href: "/insights", icon: BarChart3 },
       { label: "Personas", href: "/personas", icon: UsersRound },
       {
         label: "Social & Web Profiles",
         href: "/profile?section=social",
         icon: Link2,
+      },
+      {
+        label: "Featured Posts",
+        href: "/profile?section=featured",
+        icon: Star,
       },
     ],
   },
@@ -78,6 +86,22 @@ function ViewerMark({ name }: { name: string }) {
   if (name === WORKSPACE_FALLBACK_NAME)
     return <UserRound aria-hidden className="size-4" />;
   return <>{initials(name)}</>;
+}
+
+/**
+ * Busy orbit for a sidebar link: rendered inside the Link, so it knows when that link's
+ * navigation is pending (the next page is still being prepared on the server).
+ */
+function NavPending() {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+  return (
+    <span
+      className="busy-orbit"
+      aria-hidden="true"
+      style={{ "--busy-radius": "12px" } as CSSProperties}
+    />
+  );
 }
 
 /** "PRO" written as a superscript after the person's name. */
@@ -117,6 +141,9 @@ export function WorkspaceFrame({
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  // The mobile drawer stays open while the next page loads (so its link can show the busy
+  // orbit) and closes once the new page is on screen.
+  useEffect(() => setOpen(false), [pathname]);
   return (
     <div className="bg-sidebar min-h-screen md:flex">
       {open && (
@@ -166,15 +193,18 @@ export function WorkspaceFrame({
                     <li key={label}>
                       <Link
                         href={href}
-                        onClick={() => setOpen(false)}
+                        onClick={() => {
+                          if (active) setOpen(false);
+                        }}
                         aria-current={active ? "page" : undefined}
-                        className={`nav-tab flex h-11 items-center gap-3 rounded-xl px-4 text-[13.5px] transition-colors md:rounded-l-2xl ${active ? "font-medium" : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-white/55 md:mr-3"}`}
+                        className={`nav-tab busy-surface flex h-11 items-center gap-3 rounded-xl px-4 text-[13.5px] transition-colors md:rounded-l-2xl ${active ? "font-medium" : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-white/55 md:mr-3"}`}
                       >
                         <Icon
                           className={`size-[17px] ${active ? "" : "opacity-80"}`}
                           strokeWidth={1.7}
                         />
                         {label}
+                        <NavPending />
                       </Link>
                     </li>
                   );

@@ -291,6 +291,7 @@ function Details({
                 href={item.href}
                 target={item.href.startsWith("http") ? "_blank" : undefined}
                 rel="noopener noreferrer me"
+                data-track-kind="card_link"
                 className="flex min-w-0 items-center gap-[1.3cqw] underline-offset-[0.5cqw] hover:underline"
               >
                 {body}

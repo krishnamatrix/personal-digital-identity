@@ -106,7 +106,10 @@ export function mapResumeToIdentity(
   const added: Partial<Record<EntryKind, number>> = {};
   let skipped = 0;
   for (const kind of ENTRY_KINDS) {
-    const incoming = (extraction[kind] ?? []) as Record<string, unknown>[];
+    // Resumes never carry featured posts; only kinds the extraction schema knows are read.
+    if (!(kind in extraction)) continue;
+    const incoming = (extraction[kind as keyof ResumeExtraction] ??
+      []) as Record<string, unknown>[];
     if (incoming.length === 0) continue;
     const list = [...(existing[kind] ?? [])];
     const seen = new Set(list.map((item) => dedupeKey(kind, item.data)));

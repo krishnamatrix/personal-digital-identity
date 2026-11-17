@@ -86,6 +86,7 @@ export function isThemeId(value: unknown): value is ThemeId {
 export const SECTION_IDS = [
   "intro",
   "about",
+  "featured",
   "experience",
   "education",
   "skills",
@@ -112,6 +113,12 @@ export const SECTION_DEFS: Record<
     label: "About",
     defaultHeading: "About",
     hint: "Your full biography and professional summary.",
+    reorderable: true,
+  },
+  featured: {
+    label: "Featured posts & media",
+    defaultHeading: "Featured",
+    hint: "Posts, videos, articles and talks you tick below, from My Identity → Featured.",
     reorderable: true,
   },
   experience: {
@@ -232,16 +239,30 @@ export function normalizeConfig(raw: unknown): WebsiteConfig {
   });
   const cfg = parsed.success ? parsed.data : base;
   const seen = new Set<string>();
-  const ordered = cfg.sections.filter((s) =>
+  const deduped = cfg.sections.filter((s) =>
     seen.has(s.id) ? false : (seen.add(s.id), true),
   );
-  for (const id of SECTION_IDS)
-    if (!seen.has(id)) ordered.push({ id, visible: id !== "articles" });
-  const intro = ordered.find((s) => s.id === "intro")!;
-  return {
-    ...cfg,
-    sections: [intro, ...ordered.filter((s) => s.id !== "intro")],
-  };
+  // Intro first, then the stored order.
+  const ordered = [
+    deduped.find((s) => s.id === "intro") ?? {
+      id: "intro" as const,
+      visible: true,
+    },
+    ...deduped.filter((s) => s.id !== "intro"),
+  ];
+  seen.add("intro");
+  // Sections added in a later release go to their default position (after the section that
+  // precedes them in SECTION_IDS), not to the end.
+  SECTION_IDS.forEach((id, index) => {
+    if (seen.has(id)) return;
+    const before = SECTION_IDS.slice(0, index)
+      .reverse()
+      .find((p) => seen.has(p))!;
+    const at = ordered.findIndex((s) => s.id === before) + 1;
+    ordered.splice(at, 0, { id, visible: id !== "articles" });
+    seen.add(id);
+  });
+  return { ...cfg, sections: ordered };
 }
 
 export type WebsiteStatus =

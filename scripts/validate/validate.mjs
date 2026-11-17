@@ -40,6 +40,10 @@ const SQL_PACKAGE = [
   // M9: Free / PRO plans (one narrow SECURITY DEFINER function, AD-011). 002 (the secret) is
   // run by hand on each project and is deliberately not applied here.
   "docs/sql/milestone-9/001-pro-plans.sql",
+  // M10 (Storage policies) is not applied here: Storage is disabled in the local stack.
+  // M11: featured_post entry kind, then Insights (public ids + insight_events, anon INSERT only).
+  "docs/sql/milestone-11/001-featured-posts.sql",
+  "docs/sql/milestone-11/002-insights.sql",
 ];
 
 /**
@@ -348,16 +352,16 @@ async function main() {
         (SELECT count(*) FROM f WHERE prosecdef AND proname = 'billing_activate_pro') = 1,
         (SELECT count(*) FROM f WHERE prosrc ~* '\\mpublic\\.') = 0,
         (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'folioone'::regnamespace AND c.relkind = 'r'
-           AND c.relname IN ('accounts','identity_profiles','identity_entries','website_sites','website_published','articles','website_published_articles','digital_cards','digital_card_published','account_plans','pro_payments','billing_secrets','personas','persona_sections','persona_profile_field_selections','persona_profile_overrides','persona_revisions')
-           AND c.relrowsecurity AND c.relforcerowsecurity) = 17,
-        (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'folioone'::regnamespace AND c.relkind = 'r') = 17,
-        (SELECT count(*) FROM pg_policies WHERE schemaname = 'folioone') = 51,
+           AND c.relname IN ('accounts','identity_profiles','identity_entries','website_sites','website_published','articles','website_published_articles','digital_cards','digital_card_published','account_plans','pro_payments','billing_secrets','insight_events','personas','persona_sections','persona_profile_field_selections','persona_profile_overrides','persona_revisions')
+           AND c.relrowsecurity AND c.relforcerowsecurity) = 18,
+        (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'folioone'::regnamespace AND c.relkind = 'r') = 18,
+        (SELECT count(*) FROM pg_policies WHERE schemaname = 'folioone') = 53,
         (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r'
            AND c.relname IN ('accounts','identity_profiles','personas','persona_sections','persona_profile_field_selections','persona_profile_overrides','persona_revisions')) = ${publicDecoy ? 7 : 0};`;
     const { code, out } = await psql(sql, ["-At", "-F", ","]);
     if (code !== 0 || out.trim().split("\n").pop() !== "t,t,t,t,t,t,t,t,t,t") {
       throw new Error(
-        `Unexpected local catalog shape (folioone: 25 functions (11 + 3 website + 1 article trigger + 3 snapshot gate helpers + 3 card + 4 plan), 7 PT409, 0 x 40001, exactly 1 SECURITY DEFINER (billing_activate_pro), no public. references, 17 forced-RLS tables (7 package + identity_entries + 2 website + 2 article + 2 card + 3 plan), 51 policies (21 + 4 + 7 + 9 + 7 + 3); public app tables = ${publicDecoy ? 7 : 0}): ${out}`,
+        `Unexpected local catalog shape (folioone: 25 functions (11 + 3 website + 1 article trigger + 3 snapshot gate helpers + 3 card + 4 plan), 7 PT409, 0 x 40001, exactly 1 SECURITY DEFINER (billing_activate_pro), no public. references, 18 forced-RLS tables (7 package + identity_entries + 2 website + 2 article + 2 card + 3 plan + insight_events), 53 policies (21 + 4 + 7 + 9 + 7 + 3 + 2); public app tables = ${publicDecoy ? 7 : 0}): ${out}`,
       );
     }
   });

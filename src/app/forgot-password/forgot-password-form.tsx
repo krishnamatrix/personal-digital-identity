@@ -50,7 +50,12 @@ export function ForgotPasswordForm({ linkProblem }: { linkProblem: boolean }) {
           {state.message}
         </p>
       )}
-      <Button className="w-full" disabled={pending} type="submit">
+      <Button
+        pending={pending}
+        className="w-full"
+        disabled={pending}
+        type="submit"
+      >
         {pending ? "Sending…" : "Send reset link"}
       </Button>
       <p className="text-center text-sm">

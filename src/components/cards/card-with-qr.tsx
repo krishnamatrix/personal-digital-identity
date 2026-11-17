@@ -60,6 +60,8 @@ export function CardWithQr({
         type="button"
         aria-label={label}
         aria-expanded={open}
+        data-track-event="qr_open"
+        data-track-label="QR code"
         onClick={() => setOpen(true)}
         className="absolute top-[3%] right-[2%] flex size-8 items-center justify-center rounded-full bg-white/85 text-[#111] shadow-sm ring-1 ring-black/10 backdrop-blur transition hover:bg-white focus-visible:ring-2 focus-visible:ring-black/40 focus-visible:outline-none"
       >

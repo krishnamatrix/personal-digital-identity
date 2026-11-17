@@ -21,6 +21,37 @@ export const publishedSectionSchema = z.discriminatedUnion("id", [
     paragraphs: z.array(text(2000)).max(4),
   }),
   z.object({
+    id: z.literal("featured"),
+    heading,
+    items: z
+      .array(
+        z.object({
+          title: text(200),
+          url: httpUrl,
+          platform: text(40),
+          platformLabel: text(60),
+          mediaType: z.enum([
+            "post",
+            "video",
+            "article",
+            "podcast",
+            "talk",
+            "other",
+          ]),
+          date: month.optional(),
+          summary: text(400).optional(),
+          thumbnailUrl: httpUrl.optional(),
+          /** Set for YouTube links: the page shows a click-to-play player. */
+          youtubeId: z
+            .string()
+            .regex(/^[A-Za-z0-9_-]{11}$/)
+            .optional(),
+          headline: z.boolean().optional(),
+        }),
+      )
+      .max(24),
+  }),
+  z.object({
     id: z.literal("experience"),
     heading,
     items: z

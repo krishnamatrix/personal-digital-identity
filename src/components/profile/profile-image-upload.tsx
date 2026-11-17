@@ -143,6 +143,7 @@ export function ProfileImageUpload({
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
+            pending={pending}
             type="button"
             variant="outline"
             size="sm"
@@ -153,6 +154,7 @@ export function ProfileImageUpload({
           </Button>
           {url && (
             <Button
+              pending={pending}
               type="button"
               variant="ghost"
               size="sm"

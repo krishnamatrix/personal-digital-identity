@@ -64,11 +64,12 @@ export function ConfirmDialog({
         {children && <div className="mt-4">{children}</div>}
         <div className="mt-6 flex flex-wrap justify-end gap-3">
           <DialogClose asChild>
-            <Button variant="outline" disabled={pending}>
+            <Button pending={pending} variant="outline" disabled={pending}>
               Cancel
             </Button>
           </DialogClose>
           <Button
+            pending={pending}
             variant={tone === "danger" ? "destructive" : "default"}
             disabled={pending || confirmDisabled}
             onClick={onConfirm}

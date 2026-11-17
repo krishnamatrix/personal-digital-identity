@@ -5,6 +5,8 @@ import { getSiteUrl } from "@/lib/site-url";
 import { getPublicSite } from "@/domains/website/website-service";
 import { getPublicArticles } from "@/domains/articles/article-service";
 import { applyLiveArticles } from "@/domains/articles/public";
+import { publicIdFor } from "@/domains/insights/insights-service";
+import { PageTracker } from "@/components/insights/page-tracker";
 
 // Unpublishing must take effect immediately: never cache this route.
 export const dynamic = "force-dynamic";
@@ -56,11 +58,17 @@ export default async function PublicSitePage({
   const site = await load(slug);
   if (!site) notFound();
   // The article listing is the LIVE snapshot rows: an unpublished/archived/deleted article is gone at once.
-  const live = await getPublicArticles(site.slug).catch(() => []);
+  const [live, trackId] = await Promise.all([
+    getPublicArticles(site.slug).catch(() => []),
+    publicIdFor("website", site.slug),
+  ]);
   return (
-    <SiteView
-      theme={site.theme}
-      content={applyLiveArticles(site.content, site.slug, live)}
-    />
+    <>
+      <SiteView
+        theme={site.theme}
+        content={applyLiveArticles(site.content, site.slug, live)}
+      />
+      {trackId && <PageTracker surface="website" id={trackId} />}
+    </>
   );
 }

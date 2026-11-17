@@ -5,6 +5,7 @@ import type {
   SectionOf,
 } from "@/domains/website/published-content";
 import type { SectionStyle } from "@/domains/website/templates";
+import { FeaturedMedia } from "@/components/website/featured-media";
 
 /** Section bodies shared by all themes. Each theme passes its own tone + variant. */
 export type Tone = {
@@ -143,6 +144,8 @@ function body(section: PublishedSection, v: SectionStyle, t: Tone): ReactNode {
           ))}
         </div>
       );
+    case "featured":
+      return <Featured section={section} v={v} t={t} />;
     case "experience":
       return <Experience section={section} v={v} t={t} />;
     case "education":
@@ -272,6 +275,143 @@ function body(section: PublishedSection, v: SectionStyle, t: Tone): ReactNode {
         </ul>
       );
   }
+}
+
+const MEDIA_LABEL: Record<
+  SectionOf<"featured">["items"][number]["mediaType"],
+  string
+> = {
+  post: "Post",
+  video: "Video",
+  article: "Article",
+  podcast: "Podcast",
+  talk: "Talk",
+  other: "Link",
+};
+const CTA_VERB: Record<
+  SectionOf<"featured">["items"][number]["mediaType"],
+  string
+> = {
+  post: "View post",
+  video: "Watch",
+  article: "Read",
+  podcast: "Listen",
+  talk: "Watch talk",
+  other: "Open",
+};
+
+function Featured({
+  section,
+  v,
+  t,
+}: {
+  section: SectionOf<"featured">;
+  v: SectionStyle;
+  t: Tone;
+}) {
+  type Item = SectionOf<"featured">["items"][number];
+  const meta = (f: Item) =>
+    [f.platformLabel, MEDIA_LABEL[f.mediaType], monthLabel(f.date)]
+      .filter(Boolean)
+      .join(" · ");
+  const cta = (f: Item) => (
+    <a
+      href={f.url}
+      target="_blank"
+      rel="noopener noreferrer nofollow"
+      data-track-kind="featured"
+      data-track-label={f.title}
+      className={`inline-flex items-center gap-1 text-sm font-medium ${t.link}`}
+    >
+      {CTA_VERB[f.mediaType]} on {f.platformLabel}
+      <span aria-hidden="true">→</span>
+    </a>
+  );
+  const titleLink = (f: Item, size: string) => (
+    <a
+      href={f.url}
+      target="_blank"
+      rel="noopener noreferrer nofollow"
+      data-track-kind="featured"
+      data-track-label={f.title}
+      className={`${t.strong} ${size} hover:underline`}
+    >
+      {f.title}
+    </a>
+  );
+
+  if (v === "minimal") {
+    return (
+      <ul className="space-y-4">
+        {section.items.map((f, i) => (
+          <li key={i} className="flex flex-col gap-0.5">
+            <span className={`text-xs ${t.muted}`}>{meta(f)}</span>
+            {titleLink(f, "")}
+            {f.summary && <p className="text-sm leading-7">{f.summary}</p>}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  const headline = section.items.filter((f) => f.headline);
+  const rest = section.items.filter((f) => !f.headline);
+  const frame = `${t.card} overflow-hidden !p-0`;
+
+  return (
+    <div className="space-y-6">
+      {headline.map((f, i) => (
+        <article
+          key={`h${i}`}
+          className={`${frame} grid md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]`}
+        >
+          <FeaturedMedia
+            title={f.title}
+            platformLabel={f.platformLabel}
+            thumbnailUrl={f.thumbnailUrl}
+            youtubeId={f.youtubeId}
+            className="md:aspect-auto md:h-full md:min-h-64"
+          />
+          <div className="flex flex-col justify-center gap-3 p-6 md:p-8">
+            <p className={`text-xs tracking-wide uppercase ${t.muted}`}>
+              {meta(f)}
+            </p>
+            <h3 className="text-2xl leading-tight">{titleLink(f, "")}</h3>
+            {f.summary && (
+              <p className={`text-sm leading-7 ${t.muted}`}>{f.summary}</p>
+            )}
+            <div>{cta(f)}</div>
+          </div>
+        </article>
+      ))}
+      {rest.length > 0 && (
+        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {rest.map((f, i) => (
+            <li key={i} className={`${frame} flex flex-col`}>
+              <FeaturedMedia
+                title={f.title}
+                platformLabel={f.platformLabel}
+                thumbnailUrl={f.thumbnailUrl}
+                youtubeId={f.youtubeId}
+              />
+              <div className="flex flex-1 flex-col gap-2 p-5">
+                <p className={`text-xs ${t.muted}`}>{meta(f)}</p>
+                <h3 className="line-clamp-2 leading-snug">
+                  {titleLink(f, "")}
+                </h3>
+                {f.summary && (
+                  <p className={`line-clamp-3 text-sm leading-6 ${t.muted}`}>
+                    {f.summary}
+                  </p>
+                )}
+                <div className="mt-auto pt-2">{cta(f)}</div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 function Experience({

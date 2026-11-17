@@ -582,10 +582,16 @@ function StepActions({
           <ArrowLeft aria-hidden className="size-4" /> Back
         </Button>
       )}
-      <Button type="button" onClick={onNext} disabled={pending}>
+      <Button
+        pending={pending}
+        type="button"
+        onClick={onNext}
+        disabled={pending}
+      >
         Save and continue <ArrowRight aria-hidden className="size-4" />
       </Button>
       <Button
+        pending={pending}
         type="button"
         variant="secondary"
         onClick={onSave}
@@ -695,6 +701,7 @@ function SharePanel({
             />
           </label>
           <Button
+            pending={pending}
             type="button"
             variant="secondary"
             disabled={
@@ -764,6 +771,7 @@ function SharePanel({
             </Button>
           )}
           <Button
+            pending={pending}
             type="button"
             disabled={pending || dirty || !slug || problems.length > 0}
             onClick={() =>
@@ -778,6 +786,7 @@ function SharePanel({
           </Button>
           {live && (
             <Button
+              pending={pending}
               type="button"
               variant="ghost"
               disabled={pending}

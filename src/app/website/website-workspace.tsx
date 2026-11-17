@@ -223,6 +223,7 @@ export function WebsiteWorkspace({
   const publishBar = (
     <div className="flex flex-wrap items-center gap-3">
       <Button
+        pending={pending}
         type="button"
         variant="outline"
         disabled={pending || !dirty}
@@ -366,7 +367,11 @@ export function WebsiteWorkspace({
                   <Button variant="outline" onClick={() => setTab("preview")}>
                     Preview
                   </Button>
-                  <Button disabled={pending} onClick={onPublish}>
+                  <Button
+                    pending={pending}
+                    disabled={pending}
+                    onClick={onPublish}
+                  >
                     {pending
                       ? "Working…"
                       : live
@@ -379,6 +384,7 @@ export function WebsiteWorkspace({
                   </Button>
                   {live && (
                     <Button
+                      pending={pending}
                       variant="destructive-outline"
                       disabled={pending}
                       onClick={() => setConfirmUnpublish(true)}
@@ -648,11 +654,16 @@ export function WebsiteWorkspace({
                   <li>Unpublishing removes the public page immediately.</li>
                 </ul>
                 <div className="flex flex-wrap gap-3">
-                  <Button disabled={pending} onClick={onPublish}>
+                  <Button
+                    pending={pending}
+                    disabled={pending}
+                    onClick={onPublish}
+                  >
                     {pending ? "Working…" : live ? "Republish" : "Publish"}
                   </Button>
                   {live && (
                     <Button
+                      pending={pending}
                       variant="destructive-outline"
                       disabled={pending}
                       onClick={() => setConfirmUnpublish(true)}

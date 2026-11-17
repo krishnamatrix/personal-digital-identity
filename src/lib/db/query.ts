@@ -11,6 +11,7 @@ import "server-only";
  *   queries/articles.ts   Articles & Thoughts (private articles + the published article snapshot)
  *   queries/cards.ts      digital cards (private card + the published card snapshot)
  *   queries/billing.ts    plan (Free / PRO) + PRO activation from a verified payment
+ *   queries/insights.ts   anonymous visit / click events on live pages, read by their owner
  *   queries/media.ts      Supabase Storage: private profile photo + its published public copies
  *   queries/personas.ts   Persona repository (PostgREST + RPC) used when PERSONA_STORAGE=supabase
  *
@@ -26,4 +27,5 @@ export * from "@/lib/db/queries/articles";
 export * from "@/lib/db/queries/cards";
 export * from "@/lib/db/queries/billing";
 export * from "@/lib/db/queries/media";
+export * from "@/lib/db/queries/insights";
 export * from "@/lib/db/queries/personas";

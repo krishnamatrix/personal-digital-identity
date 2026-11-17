@@ -660,6 +660,7 @@ export function PersonaCreateFlow({
               </Button>
             ) : (
               <Button
+                pending={saving}
                 type="button"
                 variant="accent"
                 disabled={saving}

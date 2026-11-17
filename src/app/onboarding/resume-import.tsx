@@ -168,7 +168,12 @@ export function ResumeImport({
         </p>
       )}
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" onClick={upload} disabled={!file || pending}>
+        <Button
+          pending={pending}
+          type="button"
+          onClick={upload}
+          disabled={!file || pending}
+        >
           {pending ? "Reading your resume…" : "Import resume"}
         </Button>
         {pending && (

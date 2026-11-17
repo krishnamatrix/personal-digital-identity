@@ -495,6 +495,7 @@ export function PersonaEditor({
           actions={
             <>
               <Button
+                pending={pending}
                 size="sm"
                 variant="outline"
                 disabled={pending}
@@ -504,6 +505,7 @@ export function PersonaEditor({
               </Button>
               {conflict.op && (
                 <Button
+                  pending={pending}
                   size="sm"
                   variant="accent"
                   disabled={pending}

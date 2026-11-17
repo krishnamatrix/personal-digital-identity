@@ -122,6 +122,75 @@
   }
 }
 
+/*
+ * Busy state ("orbit"): the one loading style of the workspace. Whatever is waiting on the
+ * server (a sidebar link whose page is loading, a button whose action is running) turns
+ * white and a small dot travels around its border. Add <span class="busy-orbit"> inside an
+ * element with `busy-surface` (sidebar links) or use <Button pending> (sets data-busy).
+ * Unlayered on purpose: it must win over the Tailwind utilities of the element.
+ */
+.busy-surface:has(> .busy-orbit),
+[data-busy] {
+  background: var(--card);
+  color: var(--foreground);
+  opacity: 1;
+}
+.busy-orbit {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+.busy-orbit::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--foreground);
+  box-shadow: 0 0 0 2px var(--card);
+  offset-path: inset(0 round var(--busy-radius, 9999px));
+  offset-anchor: center;
+  offset-rotate: 0deg;
+  animation: busy-orbit 1.3s linear infinite;
+}
+@keyframes busy-orbit {
+  from {
+    offset-distance: 0%;
+  }
+  to {
+    offset-distance: 100%;
+  }
+}
+/* Browsers without motion paths: a softly pulsing ring instead of the travelling dot. */
+@supports not (offset-path: inset(0)) {
+  .busy-orbit::before {
+    display: none;
+  }
+  .busy-orbit {
+    animation: busy-pulse 1.2s ease-in-out infinite;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .busy-orbit::before {
+    animation: none;
+    offset-distance: 12%;
+  }
+  .busy-orbit {
+    animation: busy-pulse 1.6s ease-in-out infinite;
+  }
+}
+@keyframes busy-pulse {
+  50% {
+    box-shadow: inset 0 0 0 1.5px
+      color-mix(in srgb, var(--foreground) 35%, transparent);
+  }
+}
+
 * {
   box-sizing: border-box;
 }

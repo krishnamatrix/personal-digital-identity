@@ -78,6 +78,7 @@ export function PersonaLifecycleControls({
         {!archived &&
           (persona.isDefault ? (
             <Button
+              pending={busy}
               size="sm"
               variant="outline"
               disabled={busy}
@@ -97,6 +98,7 @@ export function PersonaLifecycleControls({
             </Button>
           ) : (
             <Button
+              pending={busy}
               size="sm"
               variant="outline"
               disabled={busy}
@@ -125,6 +127,7 @@ export function PersonaLifecycleControls({
         </Button>
         {archived ? (
           <Button
+            pending={busy}
             size="sm"
             variant="outline"
             disabled={busy}
@@ -140,6 +143,7 @@ export function PersonaLifecycleControls({
           </Button>
         ) : (
           <Button
+            pending={busy}
             size="sm"
             variant="outline"
             disabled={busy}
@@ -154,6 +158,7 @@ export function PersonaLifecycleControls({
       {archived && (
         <div className="border-border border-t pt-3">
           <Button
+            pending={busy}
             size="sm"
             variant="destructive-outline"
             disabled={busy}

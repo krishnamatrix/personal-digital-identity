@@ -279,6 +279,7 @@ export function OnboardingFlow({
 
         <div className="mt-8 flex items-center justify-between gap-3">
           <Button
+            pending={pending}
             type="button"
             variant="ghost"
             disabled={step === 1 || pending}
@@ -289,6 +290,7 @@ export function OnboardingFlow({
           <div className="flex items-center gap-2">
             {OPTIONAL_STEPS.has(step) && (
               <Button
+                pending={pending}
                 type="button"
                 variant="outline"
                 disabled={pending}
@@ -299,6 +301,7 @@ export function OnboardingFlow({
             )}
             {step < ONBOARDING_STEP_COUNT ? (
               <Button
+                pending={pending}
                 type="button"
                 disabled={pending}
                 onClick={() => advance(false)}
@@ -306,7 +309,12 @@ export function OnboardingFlow({
                 {pending ? "Saving…" : step === 1 ? "Get started" : "Continue"}
               </Button>
             ) : (
-              <Button type="button" disabled={pending} onClick={finish}>
+              <Button
+                pending={pending}
+                type="button"
+                disabled={pending}
+                onClick={finish}
+              >
                 {pending ? "Finishing…" : "Finish and open my workspace"}
               </Button>
             )}

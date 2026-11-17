@@ -14,7 +14,12 @@ export function LogoutButton() {
 
   return (
     <form action={formAction}>
-      <Button type="submit" variant="ghost" disabled={pending}>
+      <Button
+        pending={pending}
+        type="submit"
+        variant="ghost"
+        disabled={pending}
+      >
         {pending ? "Signing out…" : "Sign out"}
       </Button>
       {state.error && (

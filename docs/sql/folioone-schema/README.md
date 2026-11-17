@@ -56,4 +56,3 @@ See `rollback.sql`. Nothing runs automatically; every statement is commented out
 ## How this was produced
 
 `scripts/schema/generate-folioone-sql.mjs` reads the approved sources (`docs/sql/milestone-2/001-002`, `docs/sql/milestone-3c/001-004`, `verify-catalog.sql`, `rollback.sql`) and applies a fixed, ordered list of syntax-aware rules: schema qualifiers (`public.x`), schema-name string literals (`'public'`), the phrase `schema public`, the escaped qualifier inside one regular expression, and the `40001`→`PT409` literal. Each rule has a pinned expected replacement count per file, the `PUBLIC` role keyword is never changed, and a final scan fails if any other lowercase `public` remains. Regenerate with `pnpm schema:generate`; `pnpm test` fails if the committed files differ from the generator's output. Do not edit generated files by hand.
-

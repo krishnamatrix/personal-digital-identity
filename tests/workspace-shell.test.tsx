@@ -26,8 +26,10 @@ describe("WorkspaceShell navigation", () => {
       ["Articles & Thoughts", "/articles"],
       ["My Website", "/website"],
       ["Digital Cards", "/cards"],
+      ["Insights", "/insights"],
       ["Personas", "/personas"],
       ["Social & Web Profiles", "/profile?section=social"],
+      ["Featured Posts", "/profile?section=featured"],
     ]);
     expect(links.every((l) => l.getAttribute("href") !== "#")).toBe(true);
   });
