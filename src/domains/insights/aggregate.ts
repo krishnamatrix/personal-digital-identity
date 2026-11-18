@@ -17,6 +17,12 @@ export type InsightsReport = {
     cardSaves: Kpi;
     qrOpens: Kpi;
     videoPlays: Kpi;
+    /** Plays of the owner's own video intro (part of videoPlays). */
+    introPlays: Kpi;
+    /** Intro plays watched to the end, per 100 intro plays (current period). */
+    introCompletionRate: number;
+    /** Scheduler opened on the website, or the booking button tapped on the links page. */
+    bookingOpens: Kpi;
   };
   /** One entry per day, oldest first, for the current period. */
   daily: { date: string; views: number; clicks: number }[];
@@ -107,6 +113,10 @@ const KIND_LABEL: Record<string, string> = {
   contact: "Contact",
   website: "Website",
   card_link: "Card link",
+  booking: "Booking",
+  intro: "Video intro",
+  custom: "Custom link",
+  links: "Links page",
   link: "Link",
 };
 export const kindLabel = (kind: string) => KIND_LABEL[kind] ?? "Link";
@@ -119,6 +129,8 @@ const EVENT_LABEL: Record<string, string> = {
   qr_open: "Opened QR code",
   vcard_save: "Saved contact",
   share: "Shared",
+  booking_open: "Opened booking",
+  video_complete: "Watched video to the end",
 };
 export const eventLabel = (event: string) => EVENT_LABEL[event] ?? event;
 
@@ -146,6 +158,15 @@ export function aggregateInsights(
         .filter((e) => e.event === "view" && e.visitor_hash)
         .map((e) => `${e.occurred_at.slice(0, 10)}|${e.visitor_hash}`),
     ).size;
+  const bookings = (list: StoredInsightEvent[]) =>
+    list.filter(
+      (e) =>
+        e.event === "booking_open" ||
+        (e.event === "link_click" && e.target_kind === "booking"),
+    ).length;
+  const introPlays = (list: StoredInsightEvent[]) =>
+    list.filter((e) => e.event === "video_play" && e.target_kind === "intro")
+      .length;
   const kpi = (event: string): Kpi => ({
     current: count(current, event),
     previous: count(previous, event),
@@ -232,6 +253,10 @@ export function aggregateInsights(
   }
 
   const views = count(current, "view");
+  const introNow = introPlays(current);
+  const introDone = current.filter(
+    (e) => e.event === "video_complete" && e.target_kind === "intro",
+  ).length;
   const linkClicks = count(current, "link_click");
 
   return {
@@ -245,6 +270,14 @@ export function aggregateInsights(
       cardSaves: kpi("vcard_save"),
       qrOpens: kpi("qr_open"),
       videoPlays: kpi("video_play"),
+      introPlays: { current: introNow, previous: introPlays(previous) },
+      introCompletionRate: introNow
+        ? Math.min(100, Math.round((introDone / introNow) * 100))
+        : 0,
+      bookingOpens: {
+        current: bookings(current),
+        previous: bookings(previous),
+      },
     },
     daily: [...daily.entries()].map(([date, v]) => ({ date, ...v })),
     bySurface,

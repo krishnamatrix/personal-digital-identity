@@ -14,6 +14,23 @@ import { useEffect, useRef } from "react";
 type Surface = "website" | "card";
 
 const ENDPOINT = "/api/pulse";
+const TRACK_EVENT = "folioone:track";
+
+/**
+ * For actions that are not clicks (a video played to the end): the page's PageTracker sends
+ * it. Without a tracker on the page (the owner's preview) nothing is recorded.
+ */
+export function trackInsight(detail: {
+  event: string;
+  kind?: string;
+  label?: string;
+}) {
+  try {
+    window.dispatchEvent(new CustomEvent(TRACK_EVENT, { detail }));
+  } catch {
+    /* tracking must never break the page */
+  }
+}
 
 function send(payload: Record<string, unknown>) {
   try {
@@ -120,7 +137,12 @@ export function PageTracker({ surface, id }: { surface: Surface; id: string }) {
       } catch {
         return;
       }
-      if (!/^https?:$/.test(url.protocol) || url.host === window.location.host)
+      if (!/^https?:$/.test(url.protocol)) return;
+      // Own-site links (articles, the website from the links page) count only when marked.
+      if (
+        url.host === window.location.host &&
+        !a.hasAttribute("data-track-kind")
+      )
         return;
       send({
         ...base(),
@@ -131,12 +153,27 @@ export function PageTracker({ surface, id }: { surface: Surface; id: string }) {
       });
     }
 
+    function onTrack(e: Event) {
+      const d = (e as CustomEvent).detail as
+        | { event?: unknown; kind?: unknown; label?: unknown }
+        | undefined;
+      if (!d || typeof d.event !== "string") return;
+      send({
+        ...base(),
+        event: d.event,
+        kind: typeof d.kind === "string" ? d.kind : undefined,
+        label: typeof d.label === "string" ? d.label.slice(0, 160) : undefined,
+      });
+    }
+
     // Capture phase + auxclick: middle-clicks and new-tab opens count too.
     document.addEventListener("click", onClick, true);
     document.addEventListener("auxclick", onClick, true);
+    window.addEventListener(TRACK_EVENT, onTrack);
     return () => {
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("auxclick", onClick, true);
+      window.removeEventListener(TRACK_EVENT, onTrack);
     };
   }, [surface, id]);
 

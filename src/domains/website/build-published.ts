@@ -1,3 +1,4 @@
+import type { PublishedIntro } from "@/domains/intro/intro-video";
 import {
   entryTitle,
   type EntryData,
@@ -12,8 +13,10 @@ import {
 } from "@/domains/website/config";
 import type {
   PublishedContent,
+  PublishedLinks,
   PublishedSection,
 } from "@/domains/website/published-content";
+import { parseBookingLink } from "@/domains/website/booking-link";
 import {
   detectPlatform,
   guessMediaType,
@@ -52,6 +55,8 @@ export type IdentitySource = {
   entries: Partial<Record<EntryKind, EntryItem[]>>;
   /** The owner's PUBLISHED articles only (draft and archived ones are never passed in). */
   articles?: ArticleSource[];
+  /** The video intro as the snapshot will carry it (M13), when the owner shows it. */
+  intro?: PublishedIntro;
 };
 
 export type ArticleSource = {
@@ -143,6 +148,7 @@ export function buildPublishedContent(
     imageUrl: config.intro.showImage ? url(profile.profileImageUrl) : undefined,
     coverUrl: config.intro.showCover ? url(profile.coverImageUrl) : undefined,
     contactEmail: config.contact.showEmail ? email : undefined,
+    intro: source.intro,
   });
 
   const build: Record<
@@ -332,6 +338,24 @@ export function buildPublishedContent(
         ? { id: "social", heading: heading("social"), items }
         : null;
     },
+    booking: () => {
+      const link = parseBookingLink(config.booking.url);
+      if (!link) return null;
+      return {
+        id: "booking",
+        heading: heading("booking"),
+        ...compact({
+          provider: link.provider,
+          providerLabel: link.providerLabel,
+          url: link.url,
+          embedUrl: link.embedUrl,
+          title:
+            nonEmpty(config.booking.title)?.slice(0, 80) ??
+            "Book a time with me",
+          description: nonEmpty(config.booking.description)?.slice(0, 300),
+        }),
+      };
+    },
     contact: () => {
       const c = compact({
         email: config.contact.showEmail ? email : undefined,
@@ -353,7 +377,155 @@ export function buildPublishedContent(
       return built ? [built] : [];
     });
 
-  return { version: 1, person, sections };
+  const links = config.links.enabled ? buildLinks(source, config) : undefined;
+  return links
+    ? { version: 1, person, sections, links }
+    : { version: 1, person, sections };
+}
+
+/**
+ * The links page: the owner's chosen buttons, in their order. Entries must still be visible in
+ * My Identity, articles must still be published, and links that can no longer be resolved are
+ * dropped. Scheduling (startsOn / endsOn) is kept and applied when the page is rendered.
+ */
+export function buildLinks(
+  source: IdentitySource,
+  config: WebsiteConfig,
+): PublishedLinks {
+  const entries = [
+    ...(source.entries.social_link ?? []).map((e) => ({
+      kind: "social" as const,
+      e,
+    })),
+    ...(source.entries.featured_post ?? []).map((e) => ({
+      kind: "featured" as const,
+      e,
+    })),
+  ].filter(({ e }) => e.isVisible);
+  const entryById = new Map(entries.map((x) => [x.e.id, x]));
+  const articleById = new Map(
+    (source.articles ?? [])
+      .filter((a) => a.slug && a.publishedAt)
+      .map((a) => [a.id, a]),
+  );
+  const booking = parseBookingLink(config.booking.url);
+  const custom = (t?: string) => nonEmpty(t)?.slice(0, 100);
+
+  const items: PublishedLinks["items"] = [];
+  for (const item of config.links.items) {
+    const schedule = compact({
+      highlight: item.highlight ? true : undefined,
+      startsOn: item.startsOn,
+      endsOn: item.endsOn,
+    });
+    switch (item.source) {
+      case "custom": {
+        const link = url(item.url);
+        const title = custom(item.title);
+        if (link && title)
+          items.push({ kind: "custom", title, url: link, ...schedule });
+        break;
+      }
+      case "entry": {
+        const found = item.refId ? entryById.get(item.refId) : undefined;
+        if (!found) break;
+        const link = url(str(found.e.data, "url"));
+        if (!link) break;
+        if (found.kind === "social") {
+          items.push(
+            compact({
+              kind: "social" as const,
+              title:
+                custom(item.title) ??
+                entryTitle("social_link", found.e.data).slice(0, 100),
+              url: link,
+              platform: str(found.e.data, "platform"),
+              ...schedule,
+            }),
+          );
+        } else {
+          const videoId = youtubeVideoId(link);
+          items.push(
+            compact({
+              kind: "featured" as const,
+              title:
+                custom(item.title) ??
+                (str(found.e.data, "title") ?? "Featured").slice(0, 100),
+              url: link,
+              platform: detectPlatform(link).id,
+              thumbnailUrl:
+                url(str(found.e.data, "thumbnailUrl")) ??
+                (videoId ? youtubeThumbnail(videoId) : undefined),
+              ...schedule,
+            }),
+          );
+        }
+        break;
+      }
+      case "article": {
+        const a = item.refId ? articleById.get(item.refId) : undefined;
+        if (!a?.slug) break;
+        items.push(
+          compact({
+            kind: "article" as const,
+            title: custom(item.title) ?? a.title.slice(0, 100),
+            articleSlug: a.slug,
+            thumbnailUrl: url(a.coverImageUrl),
+            ...schedule,
+          }),
+        );
+        break;
+      }
+      case "website":
+        items.push({
+          kind: "website",
+          title: custom(item.title) ?? "My website",
+          ...schedule,
+        });
+        break;
+      case "booking":
+        if (booking)
+          items.push({
+            kind: "booking",
+            title:
+              custom(item.title) ??
+              nonEmpty(config.booking.title)?.slice(0, 100) ??
+              "Book a time with me",
+            url: booking.url,
+            ...schedule,
+          });
+        break;
+    }
+  }
+
+  const socials = config.links.showSocialIcons
+    ? (source.entries.social_link ?? []).flatMap((e) => {
+        const link = url(str(e.data, "url"));
+        return e.isVisible && link
+          ? [
+              {
+                platform: str(e.data, "platform") ?? "custom",
+                label: entryTitle("social_link", e.data).slice(0, 80),
+                url: link,
+              },
+            ]
+          : [];
+      })
+    : [];
+
+  return {
+    buttonStyle: config.links.buttonStyle,
+    socials: socials.slice(0, 30),
+    items: items.slice(0, 50),
+  };
+}
+
+/** Links visible on `today` (YYYY-MM-DD, UTC). Pure: used by the public links page. */
+export function linksLiveOn(items: PublishedLinks["items"], today: string) {
+  return items.filter(
+    (l) =>
+      (!l.startsOn || l.startsOn <= today) && (!l.endsOn || l.endsOn >= today),
+  );
 }
 
 /** Sections that currently have content (drives the "empty" hints in the editor). */

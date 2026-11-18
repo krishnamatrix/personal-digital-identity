@@ -10,6 +10,7 @@ import {
   type SectionId,
   type WebsiteConfig,
 } from "@/domains/website/config";
+import { parseBookingLink } from "@/domains/website/booking-link";
 import type {
   ArticleChoice,
   EntryChoice,
@@ -52,6 +53,79 @@ function Toggle({
         aria-label={label}
       />
     </label>
+  );
+}
+
+function BookingSettings({
+  config,
+  onChange,
+}: {
+  config: WebsiteConfig;
+  onChange: (next: WebsiteConfig) => void;
+}) {
+  const b = config.booking;
+  const set = (patch: Partial<WebsiteConfig["booking"]>) =>
+    onChange({ ...config, booking: { ...b, ...patch } });
+  const link = parseBookingLink(b.url);
+  const typed = b.url.trim() !== "";
+  return (
+    <div className="space-y-3">
+      <div className="space-y-1.5">
+        <label htmlFor="booking-url" className="text-xs font-medium">
+          Booking page link
+        </label>
+        <Input
+          id="booking-url"
+          type="url"
+          value={b.url}
+          maxLength={1000}
+          placeholder="https://calendly.com/you/intro-call"
+          aria-invalid={typed && !link ? true : undefined}
+          onChange={(e) => set({ url: e.target.value })}
+        />
+        <p
+          className={`text-xs ${typed && !link ? "text-danger" : "text-muted-foreground"}`}
+        >
+          {!typed
+            ? "Calendly, Cal.com and Google Calendar appointment pages open right on your website. Any other https booking link opens in a new tab."
+            : !link
+              ? "Use a full https link to your booking page."
+              : link.embedUrl
+                ? `${link.providerLabel}: visitors pick a time without leaving your website. It loads only when they click.`
+                : "This page will open in a new tab when visitors click “Book a time”."}
+        </p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-1.5">
+          <label htmlFor="booking-title" className="text-xs font-medium">
+            Title
+          </label>
+          <Input
+            id="booking-title"
+            value={b.title ?? ""}
+            maxLength={80}
+            placeholder="Book a time with me"
+            onChange={(e) => set({ title: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="booking-desc" className="text-xs font-medium">
+            Description
+          </label>
+          <Input
+            id="booking-desc"
+            value={b.description ?? ""}
+            maxLength={300}
+            placeholder="A 20-minute intro call about your project."
+            onChange={(e) => set({ description: e.target.value })}
+          />
+        </div>
+      </div>
+      <p className="text-muted-foreground text-xs">
+        To add it to your links page, use Links page → Add a link → Booking
+        page.
+      </p>
+    </div>
   );
 }
 
@@ -332,6 +406,10 @@ export function ContentEditor({
                         }
                       />
                     </div>
+                  )}
+
+                  {s.id === "booking" && (
+                    <BookingSettings config={config} onChange={onChange} />
                   )}
 
                   {s.id === "articles" && (

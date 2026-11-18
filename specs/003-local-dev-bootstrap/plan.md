@@ -47,13 +47,13 @@ Command contract: from the repository root, `npm run dev:local` requires `.env.l
 
 ## Validation and requirement mapping
 
-| Feature requirement / scenario | Implementation paths | Test or manual check | Command and authorization needed |
-| -------------------------------- | -------------------- | -------------------- | -------------------------------- |
-| FR-001/002; US1 scenario 1 | package.json, scripts/dev-local.mjs | Start with a harmless sentinel in `.env.local`; check server receives it | Not run in this turn; explicit verification request required |
-| FR-003; US1 scenarios 2–3 | scripts/dev-local.mjs | Missing file and unreadable file produce safe actionable errors | Not run in this turn; explicit verification request required |
-| FR-004/005; edge cases | scripts/dev-local.mjs, .gitignore | Ensure values aren't printed and process overrides are retained | Not run in this turn; explicit verification request required |
-| FR-006/007; US1 scenario 4 | package.json | Confirm `dev` unchanged and launcher performs no database operations | Not run in this turn; explicit verification request required |
-| FR-008 | docs/architecture/development-setup.md | Review documented setup and service boundary | Documentation added; no runtime verification requested |
+| Feature requirement / scenario | Implementation paths                   | Test or manual check                                                     | Command and authorization needed                             |
+| ------------------------------ | -------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| FR-001/002; US1 scenario 1     | package.json, scripts/dev-local.mjs    | Start with a harmless sentinel in `.env.local`; check server receives it | Not run in this turn; explicit verification request required |
+| FR-003; US1 scenarios 2–3      | scripts/dev-local.mjs                  | Missing file and unreadable file produce safe actionable errors          | Not run in this turn; explicit verification request required |
+| FR-004/005; edge cases         | scripts/dev-local.mjs, .gitignore      | Ensure values aren't printed and process overrides are retained          | Not run in this turn; explicit verification request required |
+| FR-006/007; US1 scenario 4     | package.json                           | Confirm `dev` unchanged and launcher performs no database operations     | Not run in this turn; explicit verification request required |
+| FR-008                         | docs/architecture/development-setup.md | Review documented setup and service boundary                             | Documentation added; no runtime verification requested       |
 
 ## Rollout and risks
 

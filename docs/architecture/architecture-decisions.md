@@ -118,3 +118,16 @@ daily, memory-only salt.
 exposing `account_id`, and without identifying visitors (GDPR / DPDP). The cost: anyone with the public anon key can add
 events to a live page, so counts can be inflated; accepted for a personal dashboard.
 **Details.** `m11-featured-and-insights.md`, `docs/sql/milestone-11/`.
+
+## AD-014: Video intros upload straight from the browser to private Storage, with a server-made signed URL
+
+**Decision.** The owner records the video intro in the browser (MediaRecorder). A server action creates a one-time signed
+upload URL with the **owner's own session**, so the `identity-video` INSERT policy still decides, and the browser uploads
+the file directly to Storage. A second server action then checks what arrived (object size and magic bytes) before the
+private `folioone.intro_videos` row points at the take. Publishing the website copies the take into the public
+`public-video` bucket (AD-005, AD-012). Captions come from a 16 kHz mono WAV of the soundtrack sent to Gemini; the video
+itself never goes to an AI provider.
+**Why.** Takes are 5 to 50 MB: too large to pass through a server action, and streaming them through our server costs time
+and bandwidth for nothing. Signed upload URLs keep the "no service-role key" rule (AD-004). No AI avatar or synthetic
+video: the person records themselves, so there is no likeness-consent or deepfake risk.
+**Details.** `m13-video-intro.md`, `docs/sql/milestone-13/`.

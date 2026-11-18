@@ -3,12 +3,21 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { MonthPicker } from "@/components/ui/month-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+/** Radix Select cannot use "" as an item value; this one stands for "no choice". */
+const NONE = "__none__";
 import type { FieldDef } from "@/domains/identity/entry-kinds";
 
 export type FieldValue = string | boolean | string[] | undefined;
-
-const selectClass =
-  "border-border bg-card focus-visible:ring-foreground/15 h-10 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-2";
 
 /** One control per FieldDef type; used by both the profile forms and the list editors. */
 export function FieldControl({
@@ -60,20 +69,44 @@ export function FieldControl({
       );
     case "select":
       control = (
-        <select
-          id={id}
-          className={selectClass}
-          value={typeof value === "string" ? value : ""}
-          aria-invalid={invalid}
-          onChange={(e) => onChange(e.target.value)}
+        <Select
+          value={typeof value === "string" && value ? value : ""}
+          onValueChange={(v) => onChange(v === NONE ? "" : v)}
         >
-          <option value="">Select…</option>
-          {field.options?.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            id={id}
+            aria-invalid={invalid}
+            aria-describedby={describedBy}
+          >
+            <SelectValue placeholder="Select…" />
+          </SelectTrigger>
+          <SelectContent>
+            {field.options?.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+            {!field.required && typeof value === "string" && value && (
+              <>
+                <SelectSeparator />
+                <SelectItem value={NONE} className="text-muted-foreground">
+                  Clear selection
+                </SelectItem>
+              </>
+            )}
+          </SelectContent>
+        </Select>
+      );
+      break;
+    case "month":
+      control = (
+        <MonthPicker
+          id={id}
+          value={typeof value === "string" ? value : ""}
+          invalid={invalid}
+          describedBy={describedBy}
+          onChange={(v) => onChange(v)}
+        />
       );
       break;
     case "tags":
@@ -93,13 +126,7 @@ export function FieldControl({
       control = (
         <Input
           id={id}
-          type={
-            field.type === "month"
-              ? "month"
-              : field.type === "text"
-                ? "text"
-                : field.type
-          }
+          type={field.type === "text" ? "text" : field.type}
           value={typeof value === "string" ? value : ""}
           placeholder={field.placeholder}
           maxLength={field.max}

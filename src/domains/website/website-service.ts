@@ -49,6 +49,13 @@ import {
   preparePublishedImage,
   publishedImageUrl,
 } from "@/domains/media/profile-image-service";
+import {
+  cleanupPublishedIntro,
+  loadIntroRow,
+  preparePublishedIntro,
+  previewIntroFor,
+  publishedIntroFor,
+} from "@/domains/intro/intro-video-service";
 
 export type WebsiteState = {
   status: WebsiteStatus;
@@ -94,6 +101,7 @@ async function loadSource() {
       "website",
     ),
   };
+  const introRow = await loadIntroRow(client, user.id);
   return {
     client,
     user,
@@ -101,8 +109,10 @@ async function loadSource() {
       profile: sourceProfile,
       entries,
       articles,
+      intro: publishedIntroFor(user.id, introRow),
     } satisfies IdentitySource,
     profile,
+    introRow,
   };
 }
 
@@ -197,7 +207,7 @@ export class PublishBlockedError extends Error {
 
 /** Builds the snapshot from My Identity + the SAVED draft right now, and publishes it. */
 export async function publishWebsite(): Promise<Date> {
-  const { client, user, source, profile } = await loadSource();
+  const { client, user, source, profile, introRow } = await loadSource();
   const site = await findSite(client, user.id);
   if (!site) throw new PublishBlockedError([]);
   const content = buildPublishedContent(source, site.config);
@@ -212,6 +222,8 @@ export async function publishWebsite(): Promise<Date> {
       profile.profileImageUrl,
       "website",
     );
+  if (content.person.intro)
+    await preparePublishedIntro(client, user.id, introRow);
   const seo = defaultSeo(content);
   const publishedAt = await publish(client, {
     theme: site.theme,
@@ -226,6 +238,7 @@ export async function publishWebsite(): Promise<Date> {
     "website",
     content.person.imageUrl,
   );
+  await cleanupPublishedIntro(client, user.id, content.person.intro);
   return publishedAt;
 }
 
@@ -233,14 +246,20 @@ export async function unpublishWebsite(): Promise<void> {
   const { client, user } = await getAuthenticatedDb();
   await unpublish(client);
   await cleanupPublishedImages(client, user.id, "website", null);
+  await cleanupPublishedIntro(client, user.id, undefined);
 }
 
 /** Content for the owner's preview: current My Identity + saved draft (never published by viewing). */
 export async function getPreview() {
-  const { client, user, source, profile } = await loadSource();
+  const { client, user, source, profile, introRow } = await loadSource();
   const site = await findSite(client, user.id);
   if (!site) return null;
   const content = buildPublishedContent(source, site.config);
+  if (content.person.intro) {
+    const intro = await previewIntroFor(client, user.id, introRow);
+    content.person = { ...content.person, intro };
+    if (!intro) delete content.person.intro;
+  }
   // The public copy only exists after publishing; the owner's preview uses a signed URL.
   if (content.person.imageUrl) {
     const shown = await ownerImageUrl(client, user.id, profile.profileImageUrl);

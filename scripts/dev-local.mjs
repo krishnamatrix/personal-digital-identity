@@ -3,7 +3,10 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repositoryRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+);
 const localEnvFile = path.join(repositoryRoot, ".env.local");
 
 try {
@@ -18,7 +21,14 @@ try {
   process.exit(1);
 }
 
-const nextCli = path.join(repositoryRoot, "node_modules", "next", "dist", "bin", "next");
+const nextCli = path.join(
+  repositoryRoot,
+  "node_modules",
+  "next",
+  "dist",
+  "bin",
+  "next",
+);
 const server = spawn(process.execPath, [nextCli, "dev"], {
   cwd: repositoryRoot,
   env: process.env,

@@ -186,7 +186,7 @@ export function InsightsDashboard({
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Tile label="Views" kpi={k.views} days={range} />
         <Tile
           label="Unique visitors"
@@ -208,11 +208,22 @@ export function InsightsDashboard({
           extra="From your card"
         />
         <Tile
+          label="QR code opens"
+          kpi={k.qrOpens}
+          days={range}
+          extra="From your card"
+        />
+        <Tile
           label="Video plays"
           kpi={k.videoPlays}
           days={range}
-          extra={`QR opened ${k.qrOpens.current}×`}
+          extra={
+            k.introPlays.current
+              ? `Your intro: ${k.introPlays.current.toLocaleString("en")} · ${k.introCompletionRate}% to the end`
+              : undefined
+          }
         />
+        <Tile label="Bookings opened" kpi={k.bookingOpens} days={range} />
       </div>
 
       <Panel

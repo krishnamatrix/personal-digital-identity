@@ -15,6 +15,13 @@ import {
 } from "@/domains/articles/article-schema";
 import { createArticleAction } from "@/app/articles/actions";
 import { SubmitButton } from "@/components/ui/submit-button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const dynamic = "force-dynamic";
 
@@ -147,18 +154,24 @@ export default async function ArticlesPage({
           {params.filter !== "all" && (
             <input type="hidden" name="status" value={params.filter} />
           )}
-          <label className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Sort</span>
-            <select
-              name="sort"
-              defaultValue={params.sort}
-              className="border-border bg-card h-10 rounded-md border px-2 text-sm"
-            >
-              <option value="updated">Recently updated</option>
-              <option value="published">Recently published</option>
-              <option value="title">Title</option>
-            </select>
-          </label>
+          <div className="flex items-center gap-2 text-sm">
+            <span id="article-sort-label" className="text-muted-foreground">
+              Sort
+            </span>
+            <Select name="sort" defaultValue={params.sort}>
+              <SelectTrigger
+                aria-labelledby="article-sort-label"
+                className="w-48"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="updated">Recently updated</SelectItem>
+                <SelectItem value="published">Recently published</SelectItem>
+                <SelectItem value="title">Title</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button type="submit" variant="outline">
             Apply
           </Button>

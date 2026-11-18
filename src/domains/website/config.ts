@@ -95,6 +95,7 @@ export const SECTION_IDS = [
   "achievements",
   "certifications",
   "social",
+  "booking",
   "contact",
 ] as const;
 export type SectionId = (typeof SECTION_IDS)[number];
@@ -169,6 +170,12 @@ export const SECTION_DEFS: Record<
     hint: "Your saved social and web profiles.",
     reorderable: true,
   },
+  booking: {
+    label: "Book a time",
+    defaultHeading: "Book a time",
+    hint: "Your Calendly, Cal.com or Google Calendar booking page.",
+    reorderable: true,
+  },
   contact: {
     label: "Contact",
     defaultHeading: "Get in touch",
@@ -178,6 +185,50 @@ export const SECTION_DEFS: Record<
 };
 
 const heading = z.string().trim().max(60).optional();
+
+/** YYYY-MM-DD (a day in the visitor-independent UTC calendar). */
+const day = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/);
+
+export const LINK_SOURCES = [
+  "custom",
+  "entry",
+  "article",
+  "website",
+  "booking",
+] as const;
+export type LinkSource = (typeof LINK_SOURCES)[number];
+
+export const linkItemSchema = z
+  .object({
+    id: z.uuid(),
+    source: z.enum(LINK_SOURCES),
+    /** Entry (social link / featured post) or article id. */
+    refId: z.uuid().optional(),
+    /** Button text; required for custom links, an optional override otherwise. */
+    title: z.string().trim().max(100).optional(),
+    /** Custom links only. */
+    url: z.preprocess(
+      (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+      z
+        .string()
+        .trim()
+        .max(2000)
+        .regex(/^https?:\/\/\S+$/, "Use a full http or https link.")
+        .optional(),
+    ),
+    highlight: z.boolean().optional(),
+    /** Shown from / until these days (inclusive, UTC). */
+    startsOn: day.optional(),
+    endsOn: day.optional(),
+  })
+  .refine((l) => !(l.startsOn && l.endsOn && l.endsOn < l.startsOn), {
+    message: "The end date is before the start date.",
+    path: ["endsOn"],
+  });
+export type LinkItem = z.infer<typeof linkItemSchema>;
+
+export const BUTTON_STYLES = ["filled", "outline", "soft"] as const;
+export type ButtonStyle = (typeof BUTTON_STYLES)[number];
 
 export const websiteConfigSchema = z.object({
   /** Order of ALL sections (intro is forced first when building). */
@@ -210,6 +261,19 @@ export const websiteConfigSchema = z.object({
     title: z.string().trim().max(120).optional(),
     description: z.string().trim().max(300).optional(),
   }),
+  /** Links page at /<slug>/links (published with the website). */
+  links: z.object({
+    enabled: z.boolean(),
+    buttonStyle: z.enum(BUTTON_STYLES),
+    showSocialIcons: z.boolean(),
+    items: z.array(linkItemSchema).max(50),
+  }),
+  /** Booking block (section "booking" and a links-page button). Empty url = none. */
+  booking: z.object({
+    url: z.string().trim().max(1000),
+    title: z.string().trim().max(80).optional(),
+    description: z.string().trim().max(300).optional(),
+  }),
 });
 export type WebsiteConfig = z.infer<typeof websiteConfigSchema>;
 
@@ -227,6 +291,13 @@ export function defaultConfig(): WebsiteConfig {
     about: { showBiography: true, showProfessionalSummary: true },
     contact: { showEmail: false, showPhone: false, showWebsite: false },
     seo: {},
+    links: {
+      enabled: false,
+      buttonStyle: "filled",
+      showSocialIcons: true,
+      items: [],
+    },
+    booking: { url: "" },
   };
 }
 

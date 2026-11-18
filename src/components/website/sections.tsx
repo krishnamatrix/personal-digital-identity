@@ -6,6 +6,7 @@ import type {
 } from "@/domains/website/published-content";
 import type { SectionStyle } from "@/domains/website/templates";
 import { FeaturedMedia } from "@/components/website/featured-media";
+import { BookingBlock } from "@/components/website/booking-block";
 
 /** Section bodies shared by all themes. Each theme passes its own tone + variant. */
 export type Tone = {
@@ -245,6 +246,8 @@ function body(section: PublishedSection, v: SectionStyle, t: Tone): ReactNode {
           ))}
         </ul>
       );
+    case "booking":
+      return <BookingBlock section={section} tone={t} />;
     case "contact":
       return (
         <ul className="space-y-2">

@@ -16,6 +16,8 @@ export const INSIGHT_EVENTS = [
   "qr_open",
   "vcard_save",
   "share",
+  "booking_open",
+  "video_complete",
 ] as const;
 export type InsightEvent = (typeof INSIGHT_EVENTS)[number];
 

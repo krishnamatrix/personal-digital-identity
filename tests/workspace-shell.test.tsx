@@ -26,6 +26,7 @@ describe("WorkspaceShell navigation", () => {
       ["Articles & Thoughts", "/articles"],
       ["My Website", "/website"],
       ["Digital Cards", "/cards"],
+      ["Video Intro", "/website/intro"],
       ["Insights", "/insights"],
       ["Personas", "/personas"],
       ["Social & Web Profiles", "/profile?section=social"],

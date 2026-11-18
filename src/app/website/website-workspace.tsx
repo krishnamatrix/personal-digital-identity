@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { AddressEditor } from "@/app/website/address-editor";
 import { ContentEditor } from "@/app/website/content-editor";
+import { LinksEditor } from "@/app/website/links-editor";
 import { SharePanel } from "@/app/website/share-panel";
 import {
   publishAction,
@@ -63,6 +64,7 @@ type Tab =
   | "overview"
   | "address"
   | "content"
+  | "links"
   | "design"
   | "preview"
   | "publish";
@@ -70,6 +72,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "address", label: "Address" },
   { id: "content", label: "Content" },
+  { id: "links", label: "Links page" },
   { id: "design", label: "Design" },
   { id: "preview", label: "Preview" },
   { id: "publish", label: "Publish" },
@@ -423,6 +426,24 @@ export function WebsiteWorkspace({
                 articleChoices={articleChoices}
                 hasContent={hasContent}
                 has={has}
+              />
+              {publishBar}
+            </div>
+          ) : (
+            needsAddress
+          ))}
+
+        {tab === "links" &&
+          (created ? (
+            <div className="space-y-6">
+              <LinksEditor
+                config={config}
+                onChange={setConfig}
+                socialChoices={choices.social ?? []}
+                featuredChoices={choices.featured ?? []}
+                articleChoices={articleChoices}
+                linksUrl={publicUrl ? `${publicUrl}/links` : null}
+                live={live}
               />
               {publishBar}
             </div>

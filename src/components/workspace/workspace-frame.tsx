@@ -15,6 +15,7 @@ import {
   Star,
   UserRound,
   UsersRound,
+  Video,
   X,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
@@ -50,6 +51,7 @@ const groups = [
     links: [
       { label: "My Website", href: "/website", icon: Globe },
       { label: "Digital Cards", href: "/cards", icon: IdCard },
+      { label: "Video Intro", href: "/website/intro", icon: Video },
       { label: "Insights", href: "/insights", icon: BarChart3 },
       { label: "Personas", href: "/personas", icon: UsersRound },
       {
@@ -66,10 +68,21 @@ const groups = [
   },
 ] as const;
 
-function isActive(pathname: string, href: string) {
+function matches(pathname: string, href: string) {
   return href === "/"
     ? pathname === "/"
     : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+const allHrefs: string[] = groups.flatMap((g) => g.links.map((l) => l.href));
+
+/** The most specific matching link wins (/website/intro is not also "My Website"). */
+function isActive(pathname: string, href: string) {
+  if (!matches(pathname, href)) return false;
+  return !allHrefs.some(
+    (other) =>
+      other !== href && other.length > href.length && matches(pathname, other),
+  );
 }
 
 function currentSection(pathname: string) {

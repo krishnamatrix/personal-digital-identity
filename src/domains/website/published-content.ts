@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { publishedIntroSchema } from "@/domains/intro/intro-video";
 
 /**
  * The PUBLISHED representation. This is the only thing the public site reads. It is built by
@@ -173,6 +174,17 @@ export const publishedSectionSchema = z.discriminatedUnion("id", [
       .max(30),
   }),
   z.object({
+    id: z.literal("booking"),
+    heading,
+    provider: z.enum(["calendly", "cal", "google", "other"]),
+    providerLabel: text(40),
+    url: httpUrl,
+    /** Present only for providers that support embedding; loaded after a click. */
+    embedUrl: httpUrl.optional(),
+    title: text(80),
+    description: text(300).optional(),
+  }),
+  z.object({
     id: z.literal("contact"),
     heading,
     email: z.string().max(254).optional(),
@@ -180,6 +192,40 @@ export const publishedSectionSchema = z.discriminatedUnion("id", [
     website: httpUrl.optional(),
   }),
 ]);
+
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+/** Links page (/<slug>/links). Scheduling is applied when the page is rendered. */
+export const publishedLinksSchema = z.object({
+  buttonStyle: z.enum(["filled", "outline", "soft"]),
+  socials: z
+    .array(z.object({ platform: text(40), label: text(80), url: httpUrl }))
+    .max(30),
+  items: z
+    .array(
+      z.object({
+        kind: z.enum([
+          "custom",
+          "social",
+          "featured",
+          "article",
+          "website",
+          "booking",
+        ]),
+        title: text(100),
+        /** Absolute link, or a site-relative one for "website" / "article" (resolved on render). */
+        url: httpUrl.optional(),
+        articleSlug: text(80).optional(),
+        platform: text(40).optional(),
+        thumbnailUrl: httpUrl.optional(),
+        highlight: z.boolean().optional(),
+        startsOn: day.optional(),
+        endsOn: day.optional(),
+      }),
+    )
+    .max(50),
+});
+export type PublishedLinks = z.infer<typeof publishedLinksSchema>;
 
 export const publishedContentSchema = z.object({
   version: z.literal(1),
@@ -193,8 +239,12 @@ export const publishedContentSchema = z.object({
     coverUrl: httpUrl.optional(),
     /** mailto target for the hero's contact action; present only if the owner opted in. */
     contactEmail: z.string().max(254).optional(),
+    /** The owner's recorded video intro (M13), shown from the hero photo. */
+    intro: publishedIntroSchema.optional(),
   }),
-  sections: z.array(publishedSectionSchema).max(12),
+  sections: z.array(publishedSectionSchema).max(13),
+  /** Present only when the owner switched the links page on. */
+  links: publishedLinksSchema.optional(),
 });
 
 export type PublishedContent = z.infer<typeof publishedContentSchema>;

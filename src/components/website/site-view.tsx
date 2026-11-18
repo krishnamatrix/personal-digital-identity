@@ -1,6 +1,7 @@
 import type { ThemeId } from "@/domains/website/config";
 import { templateSpec } from "@/domains/website/templates";
 import { TemplateSite } from "@/components/website/template-site";
+import { WithIntro } from "@/components/website/with-intro";
 import type { PublishedContent } from "@/domains/website/published-content";
 import {
   contactTarget,
@@ -114,20 +115,25 @@ function Professional({ content }: { content: PublishedContent }) {
               )}
             </div>
           </div>
-          {p.imageUrl ? (
-            <Img
-              src={p.imageUrl}
-              alt={p.name}
-              className="size-36 rounded-full border-4 border-white object-cover shadow-md md:size-52"
-            />
-          ) : (
-            <span
-              aria-hidden="true"
-              className="flex size-36 items-center justify-center rounded-full bg-[#e8e3d6] font-serif text-5xl text-[#2f4a5a] md:size-52"
-            >
-              {initialsOf(p.name)}
-            </span>
-          )}
+          <WithIntro
+            content={content}
+            className="size-36 rounded-full md:size-52"
+          >
+            {p.imageUrl ? (
+              <Img
+                src={p.imageUrl}
+                alt={p.name}
+                className="size-36 rounded-full border-4 border-white object-cover shadow-md md:size-52"
+              />
+            ) : (
+              <span
+                aria-hidden="true"
+                className="flex size-36 items-center justify-center rounded-full bg-[#e8e3d6] font-serif text-5xl text-[#2f4a5a] md:size-52"
+              >
+                {initialsOf(p.name)}
+              </span>
+            )}
+          </WithIntro>
         </section>
         {content.sections.map((s, i) => (
           <SectionBlock
@@ -220,20 +226,25 @@ function Creative({ content }: { content: PublishedContent }) {
                 )}
               </div>
             </div>
-            {p.imageUrl ? (
-              <Img
-                src={p.imageUrl}
-                alt={p.name}
-                className="size-44 rotate-3 rounded-3xl object-cover ring-4 ring-white/10 md:size-64"
-              />
-            ) : (
-              <span
-                aria-hidden="true"
-                className="flex size-44 rotate-3 items-center justify-center rounded-3xl bg-gradient-to-br from-[#ff7a59] to-[#b66dff] text-6xl font-black text-white md:size-64"
-              >
-                {initialsOf(p.name)}
-              </span>
-            )}
+            <WithIntro
+              content={content}
+              className="size-44 rotate-3 rounded-3xl md:size-64"
+            >
+              {p.imageUrl ? (
+                <Img
+                  src={p.imageUrl}
+                  alt={p.name}
+                  className="size-44 rounded-3xl object-cover ring-4 ring-white/10 md:size-64"
+                />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="flex size-44 items-center justify-center rounded-3xl bg-gradient-to-br from-[#ff7a59] to-[#b66dff] text-6xl font-black text-white md:size-64"
+                >
+                  {initialsOf(p.name)}
+                </span>
+              )}
+            </WithIntro>
           </div>
         </div>
       </div>
@@ -274,12 +285,33 @@ function Minimal({ content }: { content: PublishedContent }) {
     >
       <main id="top" className="mx-auto max-w-2xl px-6 py-16 md:py-24">
         <header className="site-reveal">
-          {p.imageUrl && (
-            <Img
-              src={p.imageUrl}
-              alt={p.name}
-              className="mb-8 size-20 rounded-full object-cover"
-            />
+          {p.imageUrl ? (
+            <WithIntro
+              content={content}
+              badge="dot"
+              className="mb-8 block size-20 rounded-full"
+            >
+              <Img
+                src={p.imageUrl}
+                alt={p.name}
+                className="size-20 rounded-full object-cover"
+              />
+            </WithIntro>
+          ) : (
+            p.intro && (
+              <WithIntro
+                content={content}
+                badge="dot"
+                className="mb-8 block size-20 rounded-full"
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex size-20 items-center justify-center rounded-full bg-neutral-100 font-serif text-2xl text-neutral-700"
+                >
+                  {initialsOf(p.name)}
+                </span>
+              </WithIntro>
+            )
           )}
           <h1 className="font-serif text-4xl tracking-tight text-neutral-950 md:text-5xl">
             {p.name}

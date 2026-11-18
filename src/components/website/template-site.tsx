@@ -1,3 +1,4 @@
+import { WithIntro } from "@/components/website/with-intro";
 import type { CSSProperties, ReactNode } from "react";
 import type { PublishedContent } from "@/domains/website/published-content";
 import type { TemplateSpec } from "@/domains/website/templates";
@@ -95,24 +96,27 @@ function Portrait({
         : shape === "rounded"
           ? "rounded-[var(--t-card-radius)]"
           : "";
-  if (p.imageUrl) {
-    return (
-      <Img
-        src={p.imageUrl}
-        alt={p.name}
-        className={`${className} ${radius} object-cover`}
-      />
-    );
-  }
-  return (
+  const portrait = p.imageUrl ? (
+    <Img
+      src={p.imageUrl}
+      alt={p.name}
+      className={`${p.intro ? "size-full" : className} ${radius} object-cover`}
+    />
+  ) : (
     <span
       aria-hidden="true"
-      className={`${className} ${radius} t-display flex items-center justify-center bg-[var(--t-surface)] text-[var(--t-accent)] ring-1 ring-[var(--t-rule)]`}
+      className={`${p.intro ? "size-full" : className} ${radius} t-display flex items-center justify-center bg-[var(--t-surface)] text-[var(--t-accent)] ring-1 ring-[var(--t-rule)]`}
     >
       <span className="text-[clamp(2.5rem,6vw,4.5rem)]">
         {initialsOf(p.name)}
       </span>
     </span>
+  );
+  if (!p.intro) return portrait;
+  return (
+    <WithIntro content={content} className={`${className} ${radius}`}>
+      {portrait}
+    </WithIntro>
   );
 }
 
