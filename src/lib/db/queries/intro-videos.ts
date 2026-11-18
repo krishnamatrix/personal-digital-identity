@@ -3,9 +3,11 @@ import type { FolioneClient } from "@/lib/db/schema";
 import { AuthorizationError } from "@/lib/supabase/server";
 import {
   cleanCaptions,
+  isIntroBackground,
   PRIVATE_VIDEO_BUCKET,
   PUBLIC_VIDEO_BUCKET,
   type CaptionCue,
+  type IntroBackground,
   type VideoType,
 } from "@/domains/intro/intro-video";
 
@@ -44,6 +46,7 @@ export type IntroVideoRow = {
     byteSize: number;
     duration: number;
     hasPoster: boolean;
+    background: IntroBackground;
     recordedAt: Date;
   } | null;
   captions: CaptionCue[];
@@ -51,8 +54,12 @@ export type IntroVideoRow = {
   updatedAt: Date;
 };
 
-const COLUMNS =
+const BASE_COLUMNS =
   "script,video_id,content_type,byte_size,duration_seconds,has_poster,captions,show_on_website,recorded_at,updated_at";
+/** `background` arrives with docs/sql/milestone-13/003; reads fall back without it. */
+const COLUMNS = `${BASE_COLUMNS},background`;
+const isMissingColumn = (error: { code?: string }) =>
+  error.code === "42703" || error.code === "PGRST204";
 
 function parse(row: Record<string, unknown>): IntroVideoRow {
   const duration = Number(row.duration_seconds);
@@ -65,6 +72,9 @@ function parse(row: Record<string, unknown>): IntroVideoRow {
           byteSize: Number(row.byte_size),
           duration,
           hasPoster: Boolean(row.has_poster),
+          background: isIntroBackground(row.background)
+            ? row.background
+            : "none",
           recordedAt: new Date(String(row.recorded_at)),
         }
       : null,
@@ -78,13 +88,17 @@ export async function findIntroVideo(
   client: QueryClient,
   userId: string,
 ): Promise<IntroVideoRow | null> {
-  const { data, error } = await client
-    .from("intro_videos")
-    .select(COLUMNS)
-    .eq("account_id", userId)
-    .maybeSingle();
+  const read = (columns: string) =>
+    client
+      .from("intro_videos")
+      .select(columns)
+      .eq("account_id", userId)
+      .maybeSingle();
+  let { data, error } = await read(COLUMNS);
+  if (error && isMissingColumn(error))
+    ({ data, error } = await read(BASE_COLUMNS));
   if (error) throw mapError(error);
-  return data ? parse(data) : null;
+  return data ? parse(data as unknown as Record<string, unknown>) : null;
 }
 
 export type IntroVideoWrite = {
@@ -95,6 +109,7 @@ export type IntroVideoWrite = {
     byteSize: number;
     duration: number;
     hasPoster: boolean;
+    background?: IntroBackground;
   } | null;
   captions?: CaptionCue[];
   showOnWebsite?: boolean;
@@ -123,15 +138,26 @@ export async function saveIntroVideo(
     values.duration_seconds = t ? Math.round(t.duration * 100) / 100 : null;
     values.has_poster = t?.hasPoster ?? false;
     values.recorded_at = t ? now : null;
+    // A plain take still saves before 003 has added the column (see the retry below).
+    values.background = t?.background ?? "none";
     if (input.captions === undefined) values.captions = [];
   }
-  const { data, error } = await client
-    .from("intro_videos")
-    .upsert(values, { onConflict: "account_id" })
-    .select(COLUMNS)
-    .single();
+  const write = (row: Record<string, unknown>, columns: string) =>
+    client
+      .from("intro_videos")
+      .upsert(row, { onConflict: "account_id" })
+      .select(columns)
+      .single();
+  let { data, error } = await write(values, COLUMNS);
+  if (error && isMissingColumn(error)) {
+    if (values.background && values.background !== "none")
+      throw new IntroVideoPersistenceError("background_column_missing");
+    const legacy = { ...values };
+    delete legacy.background;
+    ({ data, error } = await write(legacy, BASE_COLUMNS));
+  }
   if (error) throw mapError(error);
-  return parse(data);
+  return parse(data as unknown as Record<string, unknown>);
 }
 
 export async function deleteIntroVideoRow(

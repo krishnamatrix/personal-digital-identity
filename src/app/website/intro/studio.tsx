@@ -41,6 +41,7 @@ import {
   IntroPlayer,
   useSeekableDuration,
 } from "@/components/website/intro-video";
+import { CutoutPlayer } from "@/components/website/cutout-player";
 import { Recorder, type RecordedTake } from "@/app/website/intro/recorder";
 import {
   canRecord,
@@ -59,6 +60,10 @@ import {
   saveScriptAction,
   setShowOnWebsiteAction,
 } from "@/app/website/intro/actions";
+
+/** Behind a cut-out take in the studio, so it reads as "just you, over a page". */
+const CUTOUT_BACKDROP =
+  "bg-[radial-gradient(circle_at_30%_20%,#fdf6ec,#e6ecf5_55%,#d9e3ef)]";
 
 type Stage = "script" | "record" | "review";
 type Notice = { ok: boolean; text: string } | null;
@@ -392,12 +397,14 @@ function ReviewStep({
   onSaved: (take: StudioTake) => void;
 }) {
   const video = useRef<HTMLVideoElement>(null);
+  const noVideo = useRef<HTMLVideoElement>(null);
   const [url] = useState(() => URL.createObjectURL(recorded.video));
   const [poster, setPoster] = useState<Blob | null>(recorded.poster);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [phase, setPhase] = useState<SavePhase>({ step: "idle" });
   const [notice, setNotice] = useState<Notice>(null);
-  useSeekableDuration(video);
+  const cutout = recorded.background === "cutout";
+  useSeekableDuration(cutout ? noVideo : video);
 
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
   useEffect(() => {
@@ -448,6 +455,7 @@ function ReviewStep({
       duration: recorded.duration,
       hasPoster: Boolean(poster && ticket.posterUploadUrl),
       script,
+      background: recorded.background,
     });
     if (!done.ok) {
       setPhase({ step: "idle" });
@@ -471,16 +479,38 @@ function ReviewStep({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-2xl bg-neutral-950">
-        <video
-          ref={video}
-          src={url}
-          controls
-          playsInline
-          className="aspect-video w-full bg-neutral-950 object-contain"
-          aria-label="Your recording"
-        />
-      </div>
+      {cutout ? (
+        <div className={`overflow-hidden rounded-2xl ${CUTOUT_BACKDROP}`}>
+          <CutoutPlayer
+            key={posterUrl ?? "none"}
+            intro={{
+              videoUrl: url,
+              posterUrl: posterUrl ?? undefined,
+              type:
+                recorded.video.type === "video/mp4"
+                  ? "video/mp4"
+                  : "video/webm",
+              duration: recorded.duration,
+              background: "cutout",
+            }}
+            name="Your recording"
+            layout="framed"
+            track={false}
+            videoRef={video}
+          />
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl bg-neutral-950">
+          <video
+            ref={video}
+            src={url}
+            controls
+            playsInline
+            className="aspect-video w-full bg-neutral-950 object-contain"
+            aria-label="Your recording"
+          />
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <span className="tabular-nums">
           {formatDuration(recorded.duration)}
@@ -495,7 +525,7 @@ function ReviewStep({
             <img
               src={posterUrl}
               alt="Cover frame"
-              className="h-9 w-16 rounded object-cover"
+              className={`h-9 w-16 rounded object-cover ${cutout ? "object-top" : ""}`}
             />
           ) : (
             "none"
@@ -605,7 +635,13 @@ function CurrentIntro({
         </span>
       </div>
       {take.videoUrl ? (
-        <div className="[&_video]:rounded-lg">
+        <div
+          className={
+            take.background === "cutout"
+              ? `overflow-hidden rounded-lg ${CUTOUT_BACKDROP}`
+              : "[&_video]:rounded-lg"
+          }
+        >
           <IntroPlayer
             key={take.videoId}
             intro={{
@@ -614,6 +650,9 @@ function CurrentIntro({
               type: take.contentType,
               duration: take.duration,
               captions: take.captions.length ? take.captions : undefined,
+              ...(take.background !== "none"
+                ? { background: take.background }
+                : {}),
             }}
             name={name}
             track={false}

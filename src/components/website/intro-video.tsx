@@ -7,9 +7,29 @@ import {
   formatDuration,
   toWebVtt,
   transcriptOf,
+  type CaptionCue,
   type PublishedIntro,
 } from "@/domains/intro/intro-video";
 import { trackInsight } from "@/components/insights/page-tracker";
+import { CutoutPlayer } from "@/components/website/cutout-player";
+import { useSeekableDuration } from "@/components/website/use-seekable-duration";
+
+export { useSeekableDuration };
+
+/** The "▶ Watch intro · 0:47" badge on a large portrait. */
+export function IntroPill({ length }: { length: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute bottom-[6%] left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/70 py-1.5 pr-3 pl-2 text-xs font-medium whitespace-nowrap text-white shadow-lg backdrop-blur-sm transition group-hover/intro:bg-black/85"
+    >
+      <span className="flex size-5 items-center justify-center rounded-full bg-white text-black">
+        <Play className="size-2.5 translate-x-px fill-current" />
+      </span>
+      Watch intro · {length}
+    </span>
+  );
+}
 
 /**
  * The talking photo: wraps the hero portrait in a button with a small "play" badge. Tapping it
@@ -48,15 +68,7 @@ export function IntroTrigger({
           className="pointer-events-none absolute inset-0 rounded-[inherit] ring-2 ring-white/0 transition group-hover/intro:ring-white/60 motion-safe:group-hover/intro:scale-[1.02]"
         />
         {badge === "pill" ? (
-          <span
-            aria-hidden="true"
-            className="absolute bottom-[6%] left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/70 py-1.5 pr-3 pl-2 text-xs font-medium whitespace-nowrap text-white shadow-lg backdrop-blur-sm transition group-hover/intro:bg-black/85"
-          >
-            <span className="flex size-5 items-center justify-center rounded-full bg-white text-black">
-              <Play className="size-2.5 translate-x-px fill-current" />
-            </span>
-            Watch intro · {length}
-          </span>
+          <IntroPill length={length} />
         ) : (
           <span
             aria-hidden="true"
@@ -94,55 +106,60 @@ export function IntroTrigger({
   );
 }
 
-/**
- * Browser recordings (Chrome WebM especially) carry no duration, which breaks the seek bar.
- * The usual fix: seek far past the end once, let the browser find the real end, rewind.
- */
-export function useSeekableDuration(
-  ref: React.RefObject<HTMLVideoElement | null>,
-  onReady?: () => void,
-) {
-  useEffect(() => {
-    const video = ref.current;
-    if (!video) return;
-    let fixing = false;
-    const ready = () => onReady?.();
-    const onMeta = () => {
-      if (Number.isFinite(video.duration)) return ready();
-      fixing = true;
-      video.currentTime = 1e101;
-    };
-    const onDuration = () => {
-      if (!fixing || !Number.isFinite(video.duration)) return;
-      fixing = false;
-      video.currentTime = 0;
-      ready();
-    };
-    video.addEventListener("loadedmetadata", onMeta);
-    video.addEventListener("durationchange", onDuration);
-    if (video.readyState >= 1) onMeta();
-    return () => {
-      video.removeEventListener("loadedmetadata", onMeta);
-      video.removeEventListener("durationchange", onDuration);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ref]);
-}
-
 export function IntroPlayer({
   intro,
   name,
   autoPlay = false,
   track = true,
+  videoRef,
 }: {
   intro: PublishedIntro;
   name: string;
   autoPlay?: boolean;
   /** Record a 'video_complete' insight when it plays to the end. */
   track?: boolean;
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
 }) {
-  const video = useRef<HTMLVideoElement>(null);
-  const [showTranscript, setShowTranscript] = useState(false);
+  if (intro.background === "cutout")
+    return (
+      <div>
+        <CutoutPlayer
+          intro={intro}
+          name={name}
+          layout="framed"
+          autoPlay={autoPlay}
+          track={track}
+          videoRef={videoRef}
+        />
+        <Transcript cues={intro.captions ?? []} />
+      </div>
+    );
+  return (
+    <PlainPlayer
+      intro={intro}
+      name={name}
+      autoPlay={autoPlay}
+      track={track}
+      videoRef={videoRef}
+    />
+  );
+}
+
+function PlainPlayer({
+  intro,
+  name,
+  autoPlay,
+  track,
+  videoRef,
+}: {
+  intro: PublishedIntro;
+  name: string;
+  autoPlay: boolean;
+  track: boolean;
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
+}) {
+  const ownVideo = useRef<HTMLVideoElement>(null);
+  const video = videoRef ?? ownVideo;
   const cues = useMemo(() => intro.captions ?? [], [intro.captions]);
   // A blob: URL for the <track>; made in the browser only (never during server rendering).
   const [captionsUrl, setCaptionsUrl] = useState<string | null>(null);
@@ -196,23 +213,29 @@ export function IntroPlayer({
           )}
         </video>
       </div>
-      {cues.length > 0 && (
-        <div className="mt-3">
-          <button
-            type="button"
-            onClick={() => setShowTranscript((v) => !v)}
-            aria-expanded={showTranscript}
-            className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,currentColor_10%,transparent)] px-3.5 py-1.5 text-xs font-medium transition hover:bg-[color-mix(in_srgb,currentColor_18%,transparent)] focus-visible:outline-2 focus-visible:outline-current"
-          >
-            <Captions aria-hidden className="size-3.5" />
-            {showTranscript ? "Hide transcript" : "Read transcript"}
-          </button>
-          {showTranscript && (
-            <p className="mt-3 max-h-40 overflow-y-auto rounded-xl bg-[color-mix(in_srgb,currentColor_6%,transparent)] p-4 text-sm leading-6">
-              {transcriptOf(cues)}
-            </p>
-          )}
-        </div>
+      <Transcript cues={cues} />
+    </div>
+  );
+}
+
+function Transcript({ cues }: { cues: CaptionCue[] }) {
+  const [showTranscript, setShowTranscript] = useState(false);
+  if (!cues.length) return null;
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={() => setShowTranscript((v) => !v)}
+        aria-expanded={showTranscript}
+        className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,currentColor_10%,transparent)] px-3.5 py-1.5 text-xs font-medium transition hover:bg-[color-mix(in_srgb,currentColor_18%,transparent)] focus-visible:outline-2 focus-visible:outline-current"
+      >
+        <Captions aria-hidden className="size-3.5" />
+        {showTranscript ? "Hide transcript" : "Read transcript"}
+      </button>
+      {showTranscript && (
+        <p className="mt-3 max-h-40 overflow-y-auto rounded-xl bg-[color-mix(in_srgb,currentColor_6%,transparent)] p-4 text-sm leading-6">
+          {transcriptOf(cues)}
+        </p>
       )}
     </div>
   );

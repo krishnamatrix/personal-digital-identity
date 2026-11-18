@@ -23,12 +23,21 @@ import {
   formatDuration,
   MAX_RECORDING_SECONDS,
   readingSeconds,
+  type IntroBackground,
 } from "@/domains/intro/intro-video";
+import { createStackedRenderer } from "@/components/website/stacked-gl";
+import {
+  createFxEngine,
+  fxSupported,
+  loadSegmenter,
+  type FxEngine,
+} from "@/app/website/intro/background-fx";
 import {
   AUDIO_BITS_PER_SECOND,
   frameToJpeg,
   pickAudioType,
   pickVideoType,
+  STACKED_BITS_PER_SECOND,
   VIDEO_BITS_PER_SECOND,
 } from "@/app/website/intro/media";
 
@@ -39,7 +48,16 @@ export type RecordedTake = {
   /** Separate soundtrack for captions (may be missing on some browsers). */
   audio: Blob | null;
   poster: Blob | null;
+  /** How the background was treated ("cutout" = stacked picture + mask). */
+  background: IntroBackground;
 };
+
+const BACKGROUNDS: { id: IntroBackground; label: string }[] = [
+  { id: "none", label: "Off" },
+  { id: "blur", label: "Blur" },
+  { id: "cutout", label: "Cut out" },
+];
+type FxState = "off" | "loading" | "ready" | "error";
 
 const SPEEDS = [
   { id: "slow", label: "Slow", wpm: 110 },
@@ -93,6 +111,13 @@ export function Recorder({
   const [scrolling, setScrolling] = useState(false);
   const [practice, setPractice] = useState(false);
   const prompter = useRef<HTMLDivElement>(null);
+  const [background, setBackground] = useState<IntroBackground>("none");
+  const [fxState, setFxState] = useState<FxState>("off");
+  const [canUseFx, setCanUseFx] = useState(false);
+  const engine = useRef<FxEngine | null>(null);
+  const fxHost = useRef<HTMLDivElement>(null);
+  const cutoutPreview = useRef<HTMLCanvasElement>(null);
+  useEffect(() => setCanUseFx(fxSupported()), []);
   // Phones: portrait stage, smaller script text.
   useEffect(() => {
     if (window.matchMedia?.("(max-width: 639px)").matches) setFontIndex(0);
@@ -143,6 +168,71 @@ export function Recorder({
     void startCamera();
     return () => stream.current?.getTracks().forEach((t) => t.stop());
   }, [startCamera]);
+
+  // ------------------------------------------------------------------ background effects
+  const fxOn = background !== "none";
+  const cameraReady = phase !== "starting" && phase !== "error";
+  useEffect(() => {
+    const video = preview.current;
+    if (!fxOn || !cameraReady || !video) return;
+    let cancelled = false;
+    let created: FxEngine | null = null;
+    setFxState("loading");
+    loadSegmenter()
+      .then((segmenter) => {
+        if (cancelled) return;
+        created = createFxEngine(
+          video,
+          segmenter,
+          background === "cutout" ? "cutout" : "blur",
+        );
+        engine.current = created;
+        created.canvas.className =
+          "absolute inset-0 size-full -scale-x-100 object-cover";
+        created.canvas.setAttribute("aria-hidden", "true");
+        fxHost.current?.appendChild(created.canvas);
+        setFxState("ready");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFxState("error");
+        setBackground("none");
+      });
+    return () => {
+      cancelled = true;
+      created?.canvas.remove();
+      created?.dispose();
+      if (engine.current === created) engine.current = null;
+      setFxState((s) => (s === "error" ? s : "off"));
+    };
+    // The engine survives blur <-> cut out switches (see below).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fxOn, cameraReady]);
+
+  useEffect(() => {
+    const e = engine.current;
+    if (!e || fxState !== "ready" || background === "none") return;
+    e.setMode(background);
+    e.canvas.style.visibility = background === "blur" ? "visible" : "hidden";
+    if (background !== "cutout" || !cutoutPreview.current) {
+      e.onFrame(null);
+      return;
+    }
+    // Cut out: show the person over a light backdrop, the way a website would.
+    const renderer = createStackedRenderer(cutoutPreview.current);
+    if (!renderer) return;
+    e.onFrame(() => {
+      try {
+        renderer.draw(e.canvas, { fit: "cover", anchorY: 0.5 });
+      } catch {
+        /* skipped frame */
+      }
+    });
+    return () => {
+      e.onFrame(null);
+      renderer.dispose();
+    };
+  }, [background, fxState]);
 
   // ------------------------------------------------------------------- microphone meter
   useEffect(() => {
@@ -215,6 +305,8 @@ export function Recorder({
     audioChunks: Blob[];
     started: number;
     poster: Blob | null;
+    background: IntroBackground;
+    canvasTrack: MediaStreamTrack | null;
   } | null>(null);
   const timer = useRef<number | null>(null);
 
@@ -235,6 +327,7 @@ export function Recorder({
       : Promise.resolve();
     r.video.stop();
     if (r.audio?.state !== "inactive") r.audio?.stop();
+    r.canvasTrack?.stop();
     void Promise.all([done, audioDone]).then(() => {
       const mimeType = r.video.mimeType || r.chunks[0]?.type || "video/webm";
       onTake({
@@ -247,6 +340,7 @@ export function Recorder({
             })
           : null,
         poster: r.poster,
+        background: r.background,
       });
       recorders.current = null;
       setPhase("ready");
@@ -257,14 +351,27 @@ export function Recorder({
     const media = stream.current;
     if (!media) return;
     const type = pickVideoType();
+    // With a background effect, record the composited canvas (plus the microphone).
+    const fx =
+      fxState === "ready" && background !== "none" ? engine.current : null;
+    const canvasTrack =
+      fx?.canvas.captureStream(30).getVideoTracks()[0] ?? null;
+    const source = canvasTrack
+      ? new MediaStream([canvasTrack, ...media.getAudioTracks()])
+      : media;
+    const recorded: IntroBackground = canvasTrack ? background : "none";
     let video: MediaRecorder;
     try {
-      video = new MediaRecorder(media, {
+      video = new MediaRecorder(source, {
         ...(type ? { mimeType: type } : {}),
-        videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
+        videoBitsPerSecond:
+          recorded === "cutout"
+            ? STACKED_BITS_PER_SECOND
+            : VIDEO_BITS_PER_SECOND,
         audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
       });
     } catch {
+      canvasTrack?.stop();
       setError(
         "This browser cannot record video. Try the latest Chrome, Edge, Firefox or Safari.",
       );
@@ -288,6 +395,8 @@ export function Recorder({
       audioChunks: [] as Blob[],
       started: performance.now(),
       poster: null as Blob | null,
+      background: recorded,
+      canvasTrack,
     };
     video.ondataavailable = (e) => e.data.size && state.chunks.push(e.data);
     if (audio)
@@ -302,8 +411,9 @@ export function Recorder({
     rewindPrompter();
     window.setTimeout(() => setScrolling(true), 600);
     window.setTimeout(() => {
-      if (preview.current && recorders.current === state)
-        void frameToJpeg(preview.current).then((b) => {
+      const frameSource = canvasTrack ? fx?.canvas : preview.current;
+      if (frameSource && recorders.current === state)
+        void frameToJpeg(frameSource).then((b) => {
           state.poster = b;
         });
     }, 1500);
@@ -312,7 +422,7 @@ export function Recorder({
       setElapsed(s);
       if (s >= MAX_RECORDING_SECONDS) stop();
     }, 250);
-  }, [stop]);
+  }, [stop, fxState, background]);
 
   const startCountdown = () => {
     setScrolling(false);
@@ -339,6 +449,7 @@ export function Recorder({
         r.video.onstop = null;
         r.video.stop();
         r.audio?.stop();
+        r.canvasTrack?.stop();
       }
     },
     [],
@@ -373,8 +484,35 @@ export function Recorder({
           muted
           playsInline
           aria-label="Camera preview"
-          className="aspect-[3/4] w-full -scale-x-100 bg-neutral-950 object-cover sm:aspect-video"
+          className={cn(
+            "aspect-[3/4] w-full -scale-x-100 bg-neutral-950 object-cover sm:aspect-video",
+            fxState === "ready" && "opacity-0",
+          )}
         />
+        {/* Background effects: the blurred picture, or the cut-out over a light backdrop. */}
+        <div
+          ref={fxHost}
+          aria-hidden="true"
+          className={cn(
+            "absolute inset-0",
+            fxState !== "ready" && "hidden",
+            background === "cutout" &&
+              "bg-[radial-gradient(circle_at_30%_20%,#fdf6ec,#e6ecf5_55%,#d9e3ef)]",
+          )}
+        >
+          <canvas
+            ref={cutoutPreview}
+            className={cn(
+              "absolute inset-0 size-full -scale-x-100",
+              background !== "cutout" && "hidden",
+            )}
+          />
+        </div>
+        {fxState === "loading" && (
+          <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/70 px-3 py-1.5 text-xs text-white">
+            Preparing background effect…
+          </p>
+        )}
 
         {/* Teleprompter, near the top so your eyes stay close to the camera. */}
         {phase !== "error" && (
@@ -606,6 +744,54 @@ export function Recorder({
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span className="text-muted-foreground text-xs font-medium">
+          Background
+        </span>
+        <div
+          role="radiogroup"
+          aria-label="Background"
+          className="border-border bg-card inline-flex rounded-full border p-0.5"
+        >
+          {BACKGROUNDS.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              role="radio"
+              aria-checked={background === b.id}
+              disabled={
+                recording ||
+                phase === "countdown" ||
+                (b.id !== "none" && !canUseFx)
+              }
+              onClick={() => setBackground(b.id)}
+              className={cn(
+                "focus-visible:ring-foreground/20 rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50",
+                background === b.id
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {b.label}
+            </button>
+          ))}
+        </div>
+        <span
+          className="text-muted-foreground text-xs leading-5"
+          aria-live="polite"
+        >
+          {!canUseFx
+            ? "Background effects need a newer browser."
+            : fxState === "error"
+              ? "The background effect could not start on this device."
+              : background === "cutout"
+                ? "Only you appear on your website, over the page. A plain wall and good light give the cleanest edges."
+                : background === "blur"
+                  ? "Your background is blurred in the recording."
+                  : "Records exactly what your camera sees."}
+        </span>
       </div>
 
       {!recording &&

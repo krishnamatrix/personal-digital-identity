@@ -75,12 +75,50 @@ The **Your intro** panel shows the saved take, a "Show on my website" switch, th
 - Playing to the end records the new `video_complete` event, through `trackInsight()` and the page's `PageTracker`.
 - The "Video plays" tile shows "Your intro: N · X% to the end".
 
+## Background effects: blur and cut-out (AD-015)
+
+The recorder offers **Background: Off / Blur / Cut out**. Everything happens in the owner's browser while recording:
+
+- `src/app/website/intro/background-fx.ts`: MediaPipe's selfie segmenter (`@mediapipe/tasks-vision`, pinned) finds the
+  person in a 256 px copy of each camera frame. A WebGL 2 compositor then draws one of:
+  - **Blur:** the camera picture with the background blurred. This is an ordinary video, played by the normal player.
+  - **Cut out:** a **stacked** frame, twice as tall: the camera picture on top and a black-and-white mask of the person
+    below. Each half is at most 960 px on its long side.
+- The recorder records that canvas (`captureStream`) plus the microphone, at 3 Mbit/s for stacked takes. The cover
+  image is a frame of the same canvas, so a cut-out's cover is stacked too.
+- Camera frames never leave the device. The browser downloads only the runtime (jsDelivr, pinned to the installed
+  version) and the model (Google's `selfie_segmenter` v1, about 250 KB), and only when an effect is chosen.
+- Without WebGL 2, `captureStream` or the model, the effect buttons are disabled or the recorder falls back to Off.
+
+**Data.** `intro_videos.background` (`none`, `blur` or `cutout`; added by 003) and `person.intro.background` in the
+snapshot (`blur` or `cutout`, absent for none). Storage is unchanged: same buckets, types and paths.
+
+**Playback** (`src/components/website/cutout-player.tsx`, `stacked-gl.ts`):
+
+- A WebGL 1 shader reads the picture and the mask from each frame and draws only the person, with a soft edge, on a
+  transparent canvas. The `<video>` stays hidden and supplies sound.
+- **Inline** (large portraits: professional, creative, atelier and the other template designs): the photo gives way to
+  the cut-out cover, standing on the page with its bottom edge faded. Tapping plays it in place, with progress, mute,
+  captions and stop. The video downloads only after the tap, and `play()` runs inside the tap so phones allow sound.
+- **Framed** (the dialog for small avatars on the minimal design and links page, plus the studio): the cut-out with its
+  own controls (seek, time, captions, mute) and the transcript.
+- **Fallback:** without WebGL, or if the browser refuses the frames (CORS), it shows the original picture: the top half
+  of the frame, cropped with CSS. Nothing breaks.
+- Captions are drawn as text over the player, because a canvas has no `<track>`.
+
+**Quality.** Edges depend on light and background. A plain wall and even light work best; hair, raised hands and busy
+rooms give soft or speckled edges. Slow devices segment every second or third frame. A hidden browser tab pauses the
+compositor, so stay on the tab while recording.
+
 ## SQL (developer runs these; not executed by the app)
 
 - `docs/sql/milestone-13/001-intro-video-storage.sql`: the two buckets and six owner-only Storage policies. Not part of
   `pnpm validate`, because Storage is off locally.
 - `docs/sql/milestone-13/002-intro-videos.sql`: the `intro_videos` table (forced RLS, four owner policies, no anon
   access) and `video_complete` in the insight event check. Part of `pnpm validate`.
+- `docs/sql/milestone-13/003-intro-video-background.sql`: the `background` column and its CHECK. Part of
+  `pnpm validate`. Before it runs, plain takes still save and play (reads fall back to the old columns), and only saving
+  a blurred or cut-out take fails.
 
 Until both are run:
 

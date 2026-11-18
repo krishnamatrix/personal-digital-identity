@@ -43,13 +43,16 @@ export function canRecord(): boolean {
 /** About 2 Mbit/s video: a two-minute take stays near 30 MB. */
 export const VIDEO_BITS_PER_SECOND = 2_000_000;
 export const AUDIO_BITS_PER_SECOND = 128_000;
+/** Cut-out takes are twice as tall (picture + mask); the mask half compresses to little. */
+export const STACKED_BITS_PER_SECOND = 3_000_000;
 
-/** The current frame of a <video> as a JPEG (at most 1280 px wide). */
+/** The current frame of a <video> or canvas as a JPEG (at most 1280 px wide). */
 export async function frameToJpeg(
-  video: HTMLVideoElement,
+  video: HTMLVideoElement | HTMLCanvasElement,
 ): Promise<Blob | null> {
-  const w = video.videoWidth;
-  const h = video.videoHeight;
+  const w = video instanceof HTMLVideoElement ? video.videoWidth : video.width;
+  const h =
+    video instanceof HTMLVideoElement ? video.videoHeight : video.height;
   if (!w || !h) return null;
   const scale = Math.min(1, 1280 / w);
   const canvas = document.createElement("canvas");

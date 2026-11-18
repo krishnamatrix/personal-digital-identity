@@ -29,6 +29,19 @@ export const extOf = (type: VideoType) =>
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export const isUuid = (v: string) => UUID.test(v);
 
+/**
+ * The background treatment chosen at recording time (done in the owner's browser).
+ * - none:   the camera picture as is.
+ * - blur:   background blurred into the picture (an ordinary video).
+ * - cutout: a "stacked" video: each frame is twice as tall, the picture on top and a
+ *           black-and-white mask of the person below. The website player uses the mask to
+ *           draw just the person over the page (works in every browser, Safari included).
+ */
+export const INTRO_BACKGROUNDS = ["none", "blur", "cutout"] as const;
+export type IntroBackground = (typeof INTRO_BACKGROUNDS)[number];
+export const isIntroBackground = (v: unknown): v is IntroBackground =>
+  (INTRO_BACKGROUNDS as readonly unknown[]).includes(v);
+
 export type IntroTake = {
   accountId: string;
   videoId: string;
@@ -244,6 +257,8 @@ export const publishedIntroSchema = z.object({
   type: z.enum(VIDEO_TYPES),
   duration: z.number().positive().max(180),
   captions: captionsSchema.optional(),
+  /** Absent = "none". "cutout" means the video and poster are stacked (picture over mask). */
+  background: z.enum(["blur", "cutout"]).optional(),
 });
 export type PublishedIntro = z.infer<typeof publishedIntroSchema>;
 
@@ -259,6 +274,7 @@ export type StudioTake = {
   videoUrl: string | null;
   posterUrl: string | null;
   captions: CaptionCue[];
+  background: IntroBackground;
 };
 
 export type StudioState = {

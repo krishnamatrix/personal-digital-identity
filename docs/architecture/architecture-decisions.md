@@ -131,3 +131,15 @@ itself never goes to an AI provider.
 and bandwidth for nothing. Signed upload URLs keep the "no service-role key" rule (AD-004). No AI avatar or synthetic
 video: the person records themselves, so there is no likeness-consent or deepfake risk.
 **Details.** `m13-video-intro.md`, `docs/sql/milestone-13/`.
+
+## AD-015: Video intro backgrounds are processed on the device; cut-outs are stacked picture + mask videos
+
+**Decision.** Background blur and cut-out happen in the owner's browser while recording: MediaPipe's selfie segmenter
+plus a WebGL compositor. A cut-out take is an ordinary MP4/WebM whose frames are twice as tall: picture on top,
+black-and-white mask below. The website draws only the person with a small WebGL shader. Blur is baked into a normal
+video.
+**Why.** Browsers cannot reliably record transparent video, and Safari cannot play transparent WebM. A stacked video
+records, uploads, validates and plays the same way everywhere. Processing on the device means camera frames are never
+uploaded for this, and the server needs no video tooling. The price: files about 1.5× larger, a WebGL player (with a
+plain-picture fallback), and captions drawn by us instead of the browser.
+**Details.** `m13-video-intro.md` (Background effects), `docs/sql/milestone-13/003-intro-video-background.sql`.

@@ -31,6 +31,7 @@ import {
 import {
   baseVideoType,
   cleanCaptions,
+  isIntroBackground,
   isJpeg,
   isUuid,
   MAX_CAPTION_AUDIO_BYTES,
@@ -46,6 +47,7 @@ import {
   sniffVideo,
   templateScript,
   type CaptionCue,
+  type IntroBackground,
   type IntroTake,
   type PublishedIntro,
   type ScriptFacts,
@@ -104,6 +106,7 @@ async function studioTake(
     videoUrl,
     posterUrl,
     captions: row.captions,
+    background: row.take.background,
   };
 }
 
@@ -257,8 +260,12 @@ export async function completeIntroUpload(input: {
   duration: number;
   hasPoster: boolean;
   script: string;
+  background?: IntroBackground;
 }): Promise<StudioTake> {
   const contentType = baseVideoType(input.mimeType);
+  const background = input.background ?? "none";
+  if (!isIntroBackground(background))
+    throw new IntroVideoInputError("Unknown background setting.");
   if (!contentType || !isUuid(input.videoId))
     throw new IntroVideoInputError(
       "We could not find your upload. Please try again.",
@@ -308,6 +315,7 @@ export async function completeIntroUpload(input: {
       byteSize: size,
       duration: Math.min(input.duration, MAX_RECORDING_SECONDS + 5),
       hasPoster,
+      background,
     },
   });
   await removeOtherPrivateFiles(client, user.id, take.videoId);
@@ -388,6 +396,7 @@ export function publishedIntroFor(
   if (row.take.hasPoster)
     intro.posterUrl = publicVideoUrl(supabaseUrl(), publicPosterPath(take));
   if (row.captions.length) intro.captions = row.captions;
+  if (row.take.background !== "none") intro.background = row.take.background;
   return intro;
 }
 

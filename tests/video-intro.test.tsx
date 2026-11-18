@@ -73,6 +73,7 @@ vi.mock("@/lib/ai/intro-ai", () => ai);
 import {
   baseVideoType,
   cleanCaptions,
+  INTRO_BACKGROUNDS,
   privatePosterPath,
   privateVideoPath,
   publicVideoPath,
@@ -124,6 +125,7 @@ const row = (over: Partial<IntroVideoRow> = {}): IntroVideoRow => ({
     byteSize: 12_000_000,
     duration: 58.4,
     hasPoster: true,
+    background: "none",
     recordedAt: new Date("2026-11-18T10:00:00Z"),
   },
   captions: [{ start: 0, end: 2.5, text: "Hi, I'm Alex." }],
@@ -380,12 +382,45 @@ describe("video intro: saving a take", () => {
         byteSize: 12_000_000,
         duration: 58.4,
         hasPoster: true,
+        background: "none",
       },
     });
     expect(db.removePrivateVideos).toHaveBeenLastCalledWith(client, [
       `${me}/intro/${oldId}.webm`,
     ]);
     expect(saved.videoUrl).toBe(`https://signed/${me}/intro/${takeId}.mp4`);
+  });
+
+  it("records the background treatment and refuses unknown ones", async () => {
+    db.privateVideoSize.mockResolvedValue(12_000_000);
+    db.readPrivateVideoHead.mockResolvedValue(MP4);
+    db.saveIntroVideo.mockResolvedValue(
+      row({ take: { ...row().take!, background: "cutout" } }),
+    );
+    db.signPrivateVideo.mockResolvedValue("https://signed/x");
+    db.listPrivateIntroFiles.mockResolvedValue([]);
+    const saved = await completeIntroUpload({
+      videoId: takeId,
+      mimeType: "video/mp4",
+      duration: 30,
+      hasPoster: false,
+      script: "Hi",
+      background: "cutout",
+    });
+    expect(db.saveIntroVideo.mock.calls.at(-1)![2].take.background).toBe(
+      "cutout",
+    );
+    expect(saved.background).toBe("cutout");
+    await expect(
+      completeIntroUpload({
+        videoId: takeId,
+        mimeType: "video/mp4",
+        duration: 30,
+        hasPoster: false,
+        script: "Hi",
+        background: "chroma" as never,
+      }),
+    ).rejects.toThrow("Unknown background setting.");
   });
 });
 
@@ -403,6 +438,18 @@ describe("video intro: website publishing", () => {
       duration: 58.4,
       captions: [{ start: 0, end: 2.5, text: "Hi, I'm Alex." }],
     });
+  });
+
+  it("tells the website when the take is a cut-out", () => {
+    const cut = row({ take: { ...row().take!, background: "cutout" } });
+    expect(publishedIntroFor(me, cut)?.background).toBe("cutout");
+    expect(publishedIntroFor(me, row())).not.toHaveProperty("background");
+    expect(
+      publishedIntroSchema.safeParse({
+        ...publishedIntroFor(me, cut),
+        background: "green-screen",
+      }).success,
+    ).toBe(false);
   });
 
   it("copies video and poster to the public bucket before publishing", async () => {
@@ -546,6 +593,66 @@ describe("video intro on the public website", () => {
     ).not.toBeInTheDocument();
   });
 
+  // jsdom has no WebGL: the player falls back to the plain picture (also tested here).
+  const noWebGl = () =>
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+
+  const cutoutSource = (): IdentitySource => ({
+    ...source(true),
+    intro: { ...intro, background: "cutout" },
+  });
+
+  for (const theme of ["professional", "creative", "atelier"] as const)
+    it(`plays a cut-out intro in place of the ${theme} portrait`, async () => {
+      const gl = noWebGl();
+      const play = vi
+        .spyOn(HTMLMediaElement.prototype, "play")
+        .mockResolvedValue(undefined);
+      const content = buildPublishedContent(cutoutSource(), defaultConfig());
+      expect(content.person.intro?.background).toBe("cutout");
+      const { unmount } = render(<SiteView theme={theme} content={content} />);
+      const button = screen.getByRole("button", {
+        name: "Play Alex Example's video intro (0:58)",
+      });
+      expect(button).toHaveAttribute("data-track-event", "video_play");
+      // The video element is there but loads nothing before the tap.
+      const video = screen.getByLabelText("Alex Example's video intro");
+      expect(video).toHaveAttribute("preload", "none");
+      expect(video).toHaveAttribute("crossorigin", "anonymous");
+      await userEvent.click(button);
+      // Plays right there (inside the tap, so phones allow sound): no dialog.
+      expect(play).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Stop video" }),
+      ).toBeInTheDocument();
+      play.mockRestore();
+      gl.mockRestore();
+      unmount();
+    });
+
+  it("opens a cut-out intro on a small avatar in the dialog, with its own controls", async () => {
+    noWebGl();
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+    const content = buildPublishedContent(cutoutSource(), defaultConfig());
+    render(<SiteView theme="minimal" content={content} />);
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "Play Alex Example's video intro (0:58)",
+      }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.querySelector("video")).toHaveAttribute(
+      "src",
+      intro.videoUrl,
+    );
+    expect(screen.getByRole("slider", { name: "Seek" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Read transcript" }),
+    ).toBeInTheDocument();
+    vi.restoreAllMocks();
+  });
+
   it("offers the intro on the links page too", () => {
     const content = buildPublishedContent(source(true), defaultConfig());
     render(
@@ -642,6 +749,25 @@ describe("video intro SQL", () => {
     "utf8",
   );
   const validate = readFileSync("scripts/validate/validate.mjs", "utf8");
+  const background = readFileSync(
+    "docs/sql/milestone-13/003-intro-video-background.sql",
+    "utf8",
+  );
+
+  it("adds the background column with exactly the app's values", () => {
+    expect(background).toContain(
+      "ADD COLUMN background text NOT NULL DEFAULT 'none';",
+    );
+    expect(background).toContain(
+      `CHECK (background IN (${INTRO_BACKGROUNDS.map((b) => `'${b}'`).join(", ")}))`,
+    );
+    // Policies, grants and Storage are untouched.
+    expect(background).not.toMatch(/^\s*(CREATE POLICY|GRANT|REVOKE|DROP)/im);
+    expect(background).not.toMatch(/storage\./);
+    expect(validate).toContain(
+      '"docs/sql/milestone-13/003-intro-video-background.sql"',
+    );
+  });
 
   it("keeps recordings private and only published copies public", () => {
     expect(storage).toMatch(

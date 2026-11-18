@@ -21,6 +21,7 @@ import {
   type UploadTicket,
 } from "@/domains/intro/intro-video-service";
 import {
+  INTRO_BACKGROUNDS,
   MAX_SCRIPT_CHARS,
   SCRIPT_LENGTHS,
   SCRIPT_TONES,
@@ -109,6 +110,7 @@ const completeInput = z.object({
   duration: z.number(),
   hasPoster: z.boolean(),
   script: z.string().max(MAX_SCRIPT_CHARS * 2),
+  background: z.enum(INTRO_BACKGROUNDS).optional(),
 });
 
 export async function completeUploadAction(
