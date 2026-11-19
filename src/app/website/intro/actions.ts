@@ -16,6 +16,7 @@ import {
   draftIntroScript,
   IntroVideoInputError,
   saveIntroCaptions,
+  saveIntroTrim,
   saveIntroScript,
   setIntroOnWebsite,
   type UploadTicket,
@@ -104,6 +105,8 @@ export async function beginUploadAction(
   }
 }
 
+const trimInput = z.object({ start: z.number(), end: z.number() });
+
 const completeInput = z.object({
   videoId: z.string().max(40),
   mimeType: z.string().max(120),
@@ -111,6 +114,7 @@ const completeInput = z.object({
   hasPoster: z.boolean(),
   script: z.string().max(MAX_SCRIPT_CHARS * 2),
   background: z.enum(INTRO_BACKGROUNDS).optional(),
+  trim: trimInput.nullable().optional(),
 });
 
 export async function completeUploadAction(
@@ -155,6 +159,18 @@ export async function saveCaptionsAction(
     return { ok: true, captions: saved };
   } catch (error) {
     return failure(error, "save-captions");
+  }
+}
+
+export async function saveTrimAction(
+  trim: unknown,
+): Promise<StudioResult<{ take: StudioTake }>> {
+  try {
+    const take = await saveIntroTrim(trimInput.nullable().parse(trim));
+    refresh();
+    return { ok: true, take };
+  } catch (error) {
+    return failure(error, "trim");
   }
 }
 

@@ -20,7 +20,9 @@ import {
 } from "react";
 import {
   formatDuration,
+  playLength,
   type CaptionCue,
+  type IntroTrim,
   type PublishedIntro,
 } from "@/domains/intro/intro-video";
 import { trackInsight } from "@/components/insights/page-tracker";
@@ -34,8 +36,11 @@ import {
 } from "@/components/website/stacked-gl";
 
 /**
- * The cut-out intro player: plays a stacked video (picture + mask) through WebGL so only the
- * person is drawn, over whatever is behind the player. Two layouts:
+ * The intro player, for every intro: custom controls, captions drawn over the picture, and
+ * the owner's trim honoured (only the chosen part plays; the seek bar covers just that).
+ *
+ * A cut-out intro (a stacked video: picture + mask) is drawn through WebGL so only the
+ * person shows, over whatever is behind the player. Two layouts:
  *  - "inline": takes the hero portrait's place; the person appears in the page itself and
  *              talks right there when tapped (nothing downloads before that).
  *  - "framed": a player with controls (the dialog, the studio).
@@ -54,6 +59,8 @@ function useStackedCanvas(
   video: RefObject<HTMLVideoElement | null>,
   posterUrl: string | undefined,
   fit: StackedFit,
+  /** Plain videos show the <video> itself: none of this runs. */
+  enabled: boolean,
 ) {
   const renderer = useRef<StackedRenderer | null>(null);
   const last = useRef<StackedSource | null>(null);
@@ -79,7 +86,7 @@ function useStackedCanvas(
 
   useEffect(() => {
     const el = canvas.current;
-    if (!el) return;
+    if (!el || !enabled) return;
     const r = createStackedRenderer(el);
     if (!r) {
       setFallback(true);
@@ -96,11 +103,11 @@ function useStackedCanvas(
       r.dispose();
       renderer.current = null;
     };
-  }, [canvas, paint]);
+  }, [canvas, paint, enabled]);
 
   // The cover image, until the video has frames to show.
   useEffect(() => {
-    if (!posterUrl || fallback) return;
+    if (!posterUrl || fallback || !enabled) return;
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.decoding = "async";
@@ -112,12 +119,12 @@ function useStackedCanvas(
     return () => {
       img.onload = null;
     };
-  }, [posterUrl, fallback, paint]);
+  }, [posterUrl, fallback, paint, enabled]);
 
   // Video frames: every new frame while playing, and once after seeking / pausing.
   useEffect(() => {
     const v = video.current;
-    if (!v || fallback) return;
+    if (!v || fallback || !enabled) return;
     let raf = 0;
     let vfc = 0;
     const hasVfc = "requestVideoFrameCallback" in v;
@@ -144,7 +151,7 @@ function useStackedCanvas(
       cancelAnimationFrame(raf);
       if (hasVfc && vfc) v.cancelVideoFrameCallback(vfc);
     };
-  }, [video, fallback, paint]);
+  }, [video, fallback, paint, enabled]);
 
   const showPoster = useCallback(() => {
     showingVideo.current = false;
@@ -162,25 +169,51 @@ function useStackedCanvas(
   return { fallback, posterReady, aspect, showPoster };
 }
 
-/** Video time, playing state and the current caption, for custom controls. */
+/**
+ * Video time and state for custom controls, within the trimmed part: `time` and `length`
+ * are relative to the trim start, and playback stops at the trim end (checked every frame,
+ * so it does not overshoot by a quarter second as `timeupdate` would).
+ */
 function usePlayback(
   video: RefObject<HTMLVideoElement | null>,
   knownDuration: number,
+  trim: IntroTrim | undefined,
+  onFinish: () => void,
 ) {
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [duration, setDuration] = useState(knownDuration);
+  const [fileDuration, setFileDuration] = useState(knownDuration);
   const [muted, setMuted] = useState(false);
+  const start = trim?.start ?? 0;
+  const end = trim?.end ?? null;
+  const finish = useRef(onFinish);
+  finish.current = onFinish;
   useEffect(() => {
     const v = video.current;
     if (!v) return;
+    let raf = 0;
+    const atEnd = () => end !== null && v.currentTime >= end - 0.02;
     const sync = () => {
       setTime(v.currentTime);
       setPlaying(!v.paused && !v.ended);
       setMuted(v.muted);
       if (Number.isFinite(v.duration) && v.duration > 0)
-        setDuration(v.duration);
+        setFileDuration(v.duration);
     };
+    const watch = () => {
+      if (v.paused) return;
+      if (atEnd()) {
+        v.pause();
+        finish.current();
+        return;
+      }
+      raf = requestAnimationFrame(watch);
+    };
+    const onPlaying = () => {
+      cancelAnimationFrame(raf);
+      if (end !== null) raf = requestAnimationFrame(watch);
+    };
+    const onEnded = () => finish.current();
     const events = [
       "timeupdate",
       "play",
@@ -191,12 +224,30 @@ function usePlayback(
       "seeked",
     ];
     events.forEach((e) => v.addEventListener(e, sync));
-    return () => events.forEach((e) => v.removeEventListener(e, sync));
-  }, [video]);
-  return { time, playing, duration, muted };
+    v.addEventListener("playing", onPlaying);
+    v.addEventListener("ended", onEnded);
+    return () => {
+      cancelAnimationFrame(raf);
+      events.forEach((e) => v.removeEventListener(e, sync));
+      v.removeEventListener("playing", onPlaying);
+      v.removeEventListener("ended", onEnded);
+    };
+  }, [video, end]);
+
+  const length = Math.max(0, (end ?? fileDuration) - start);
+  return {
+    time: Math.min(length, Math.max(0, time - start)),
+    /** The file time, for captions (which keep the file's timeline). */
+    fileTime: time,
+    playing,
+    length,
+    muted,
+    start,
+    end,
+  };
 }
 
-export function CutoutPlayer({
+export function IntroVideoPlayer({
   intro,
   name,
   layout,
@@ -221,6 +272,7 @@ export function CutoutPlayer({
   /** Inline only: the photo, shown until the cut-out cover has loaded. */
   children?: ReactNode;
 }) {
+  const stacked = intro.background === "cutout";
   const canvas = useRef<HTMLCanvasElement>(null);
   const ownVideo = useRef<HTMLVideoElement>(null);
   const video = videoRef ?? ownVideo;
@@ -237,18 +289,46 @@ export function CutoutPlayer({
     video,
     intro.posterUrl,
     fit,
+    stacked,
   );
-  const { time, playing, duration, muted } = usePlayback(video, intro.duration);
+  const completed = useRef(false);
+  const finished = () => {
+    if (track && !completed.current) {
+      completed.current = true;
+      trackInsight({
+        event: "video_complete",
+        kind: "intro",
+        label: "Video intro",
+      });
+    }
+    if (inline) stop();
+  };
+  const playback = usePlayback(video, intro.duration, intro.trim, () =>
+    finished(),
+  );
+  const { time, fileTime, playing, length, muted } = playback;
+  const [plainAspect, setPlainAspect] = useState<number | null>(null);
   const [started, setStarted] = useState(false);
   const [captionsOn, setCaptionsOn] = useState(true);
   const cues = intro.captions ?? [];
-  const cue = captionsOn ? cueAt(cues, time) : null;
-  const completed = useRef(false);
+  const cue = captionsOn ? cueAt(cues, fileTime) : null;
+
+  /** From the trim start whenever playback is outside the trimmed part. */
+  const rewindIntoRange = (v: HTMLVideoElement) => {
+    const { start, end } = playback;
+    if (
+      v.currentTime < start - 0.05 ||
+      (end !== null && v.currentTime >= end - 0.05) ||
+      v.ended
+    )
+      v.currentTime = start;
+  };
 
   const start = () => {
     const v = video.current;
     if (!v) return;
     setStarted(true);
+    rewindIntoRange(v);
     // play() inside the tap, so phones allow sound.
     void v.play().catch(() => undefined);
   };
@@ -256,14 +336,16 @@ export function CutoutPlayer({
     const v = video.current;
     if (!v) return;
     if (!started) return start();
-    if (v.paused || v.ended) void v.play().catch(() => undefined);
-    else v.pause();
+    if (v.paused || v.ended) {
+      rewindIntoRange(v);
+      void v.play().catch(() => undefined);
+    } else v.pause();
   };
   const stop = () => {
     const v = video.current;
     if (!v) return;
     v.pause();
-    v.currentTime = 0;
+    v.currentTime = playback.start;
     setStarted(false);
     showPoster();
   };
@@ -272,10 +354,12 @@ export function CutoutPlayer({
   // shows no seek bar and must start inside the tap, so it skips this.
   const noVideo = useRef<HTMLVideoElement>(null);
   useSeekableDuration(inline ? noVideo : video, () => {
+    if (video.current && playback.start > 0)
+      video.current.currentTime = playback.start;
     if (autoPlay) start();
   });
 
-  const pictureAspect = aspect ?? 16 / 9;
+  const pictureAspect = (stacked ? aspect : plainAspect) ?? 16 / 9;
   const label = `${name}'s video intro`;
 
   const videoElement = (
@@ -286,23 +370,20 @@ export function CutoutPlayer({
       playsInline
       preload={inline ? "none" : "metadata"}
       aria-label={label}
-      onEnded={() => {
-        if (track && !completed.current) {
-          completed.current = true;
-          trackInsight({
-            event: "video_complete",
-            kind: "intro",
-            label: "Video intro",
-          });
-        }
-        if (inline) stop();
+      poster={stacked ? undefined : intro.posterUrl}
+      onLoadedMetadata={(e) => {
+        const v = e.currentTarget;
+        if (v.videoWidth && v.videoHeight)
+          setPlainAspect(v.videoWidth / v.videoHeight);
       }}
       // The canvas shows the picture; without WebGL the video itself is shown, cropped to
       // its top (picture) half.
       className={
-        fallback
-          ? "absolute inset-x-0 top-0 h-[200%] w-full object-cover object-top"
-          : "pointer-events-none absolute size-px opacity-0"
+        !stacked
+          ? "absolute inset-0 size-full bg-black object-contain"
+          : fallback
+            ? "absolute inset-x-0 top-0 h-[200%] w-full object-cover object-top"
+            : "pointer-events-none absolute size-px opacity-0"
       }
     />
   );
@@ -343,7 +424,7 @@ export function CutoutPlayer({
           onClick={toggle}
           aria-label={
             !started
-              ? `Play ${name}'s video intro (${formatDuration(intro.duration)})`
+              ? `Play ${name}'s video intro (${formatDuration(playLength(intro))})`
               : playing
                 ? "Pause video"
                 : "Play video"
@@ -374,7 +455,7 @@ export function CutoutPlayer({
                 <span
                   className="absolute inset-y-0 left-0 rounded-full bg-current"
                   style={{
-                    width: `${Math.min(100, (time / (duration || 1)) * 100)}%`,
+                    width: `${Math.min(100, (time / (length || 1)) * 100)}%`,
                   }}
                 />
               </span>
@@ -424,11 +505,13 @@ export function CutoutPlayer({
     >
       {videoElement}
       {fallbackPoster}
-      <canvas
-        ref={canvas}
-        aria-hidden="true"
-        className="absolute inset-0 size-full"
-      />
+      {stacked && (
+        <canvas
+          ref={canvas}
+          aria-hidden="true"
+          className="absolute inset-0 size-full"
+        />
+      )}
       <button
         type="button"
         onClick={toggle}
@@ -460,18 +543,19 @@ export function CutoutPlayer({
         <input
           type="range"
           min={0}
-          max={duration || 1}
+          max={length || 1}
           step={0.1}
-          value={Math.min(time, duration || 1)}
+          value={Math.min(time, length || 1)}
           aria-label="Seek"
           onChange={(e) => {
             if (video.current)
-              video.current.currentTime = Number(e.target.value);
+              video.current.currentTime =
+                playback.start + Number(e.target.value);
           }}
           className="h-1 flex-1 cursor-pointer accent-white"
         />
         <span className="text-xs tabular-nums">
-          {formatDuration(time)} / {formatDuration(duration)}
+          {formatDuration(time)} / {formatDuration(length)}
         </span>
         {cues.length > 0 && (
           <IconButton

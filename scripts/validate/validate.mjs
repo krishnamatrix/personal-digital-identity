@@ -49,6 +49,7 @@ const SQL_PACKAGE = [
   // M13: video intro row (owner-only) + 'video_complete' event. 001 (Storage) is not applied.
   "docs/sql/milestone-13/002-intro-videos.sql",
   "docs/sql/milestone-13/003-intro-video-background.sql",
+  "docs/sql/milestone-13/004-intro-trim-and-studio.sql",
 ];
 
 /**

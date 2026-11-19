@@ -8,6 +8,7 @@ import { computeCompletion } from "@/domains/identity/completion";
 import type { EntryItem, EntryKind } from "@/domains/identity/entry-kinds";
 import { ProfileWorkspace } from "@/app/profile/profile-workspace";
 import { myProfileImageDisplayUrl } from "@/domains/media/profile-image-service";
+import { isResumeExtractionConfigured } from "@/lib/ai/resume-extractor";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,11 @@ export default async function ProfilePage({
           }}
           welcome={welcome === "1"}
           initialSection={section}
+          resumeImport={{
+            enabled: isResumeExtractionConfigured(),
+            // Nothing about their work or studies yet: most likely skipped in onboarding.
+            suggest: !entries.employment?.length && !entries.education?.length,
+          }}
         />
       </WorkspaceShell>
     );

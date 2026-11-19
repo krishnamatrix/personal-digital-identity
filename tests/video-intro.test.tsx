@@ -91,6 +91,7 @@ import {
   cleanupPublishedIntro,
   completeIntroUpload,
   preparePublishedIntro,
+  saveIntroTrim,
   previewIntroFor,
   publishedIntroFor,
 } from "@/domains/intro/intro-video-service";
@@ -126,6 +127,7 @@ const row = (over: Partial<IntroVideoRow> = {}): IntroVideoRow => ({
     duration: 58.4,
     hasPoster: true,
     background: "none",
+    trim: null,
     recordedAt: new Date("2026-11-18T10:00:00Z"),
   },
   captions: [{ start: 0, end: 2.5, text: "Hi, I'm Alex." }],
@@ -384,6 +386,7 @@ describe("video intro: saving a take", () => {
         hasPoster: true,
         background: "none",
       },
+      trim: null,
     });
     expect(db.removePrivateVideos).toHaveBeenLastCalledWith(client, [
       `${me}/intro/${oldId}.webm`,
@@ -450,6 +453,41 @@ describe("video intro: website publishing", () => {
         background: "green-screen",
       }).success,
     ).toBe(false);
+  });
+
+  it("carries the trim, and the badge shows the trimmed length", () => {
+    const trimmed = row({
+      take: { ...row().take!, trim: { start: 2, end: 42 } },
+    });
+    expect(publishedIntroFor(me, trimmed)?.trim).toEqual({ start: 2, end: 42 });
+    expect(publishedIntroFor(me, row())).not.toHaveProperty("trim");
+    expect(
+      publishedIntroSchema.safeParse({
+        ...publishedIntroFor(me, trimmed),
+        trim: { start: 5, end: 3 },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("saves a trim on the saved take, and refuses less than a second", async () => {
+    db.findIntroVideo.mockResolvedValue(row());
+    db.saveIntroVideo.mockResolvedValue(
+      row({ take: { ...row().take!, trim: { start: 1.5, end: 50 } } }),
+    );
+    db.signPrivateVideo.mockResolvedValue("https://signed/x");
+    const take = await saveIntroTrim({ start: 1.5, end: 50 });
+    expect(db.saveIntroVideo).toHaveBeenLastCalledWith(client, me, {
+      trim: { start: 1.5, end: 50 },
+    });
+    expect(take.trim).toEqual({ start: 1.5, end: 50 });
+    await expect(saveIntroTrim({ start: 10, end: 10.4 })).rejects.toThrow(
+      "Keep at least one second of your intro.",
+    );
+    // Before 004 the database cannot keep it: say so instead of pretending.
+    db.saveIntroVideo.mockResolvedValue(row());
+    await expect(saveIntroTrim({ start: 1.5, end: 50 })).rejects.toThrow(
+      "Trimming is not available yet.",
+    );
   });
 
   it("copies video and poster to the public bucket before publishing", async () => {
@@ -577,13 +615,28 @@ describe("video intro on the public website", () => {
       expect(document.querySelector("video")).toBeNull();
       await userEvent.click(button);
       const video = await screen.findByLabelText("Alex Example's video intro");
-      expect(video.querySelector("source")).toHaveAttribute(
-        "src",
-        intro.videoUrl,
-      );
+      expect(video).toHaveAttribute("src", intro.videoUrl);
       expect(screen.getByRole("dialog")).toHaveTextContent("Meet Alex Example");
       unmount();
     });
+
+  it("plays only the trimmed part on the website", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+    const content = buildPublishedContent(
+      { ...source(true), intro: { ...intro, trim: { start: 3, end: 43 } } },
+      defaultConfig(),
+    );
+    render(<SiteView theme="professional" content={content} />);
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "Play Alex Example's video intro (0:40)",
+      }),
+    );
+    const seek = await screen.findByRole("slider", { name: "Seek" });
+    expect(seek).toHaveAttribute("max", "40");
+    expect(screen.getByText("0:00 / 0:40")).toBeInTheDocument();
+    vi.restoreAllMocks();
+  });
 
   it("shows no button without an intro", () => {
     const content = buildPublishedContent(source(false), defaultConfig());
@@ -754,12 +807,27 @@ describe("video intro SQL", () => {
     "utf8",
   );
 
-  it("adds the background column with exactly the app's values", () => {
+  it("adds trim columns and allows every background the app records (004)", () => {
+    const trim = readFileSync(
+      "docs/sql/milestone-13/004-intro-trim-and-studio.sql",
+      "utf8",
+    );
+    expect(trim).toContain(
+      `CHECK (background IN (${INTRO_BACKGROUNDS.map((b) => `'${b}'`).join(", ")}))`,
+    );
+    expect(trim).toMatch(/trim_end >= trim_start \+ 1/);
+    expect(trim).not.toMatch(/^\s*(CREATE POLICY|GRANT|REVOKE)/im);
+    expect(validate).toContain(
+      '"docs/sql/milestone-13/004-intro-trim-and-studio.sql"',
+    );
+  });
+
+  it("adds the background column (003)", () => {
     expect(background).toContain(
       "ADD COLUMN background text NOT NULL DEFAULT 'none';",
     );
     expect(background).toContain(
-      `CHECK (background IN (${INTRO_BACKGROUNDS.map((b) => `'${b}'`).join(", ")}))`,
+      "CHECK (background IN ('none', 'blur', 'cutout'))",
     );
     // Policies, grants and Storage are untouched.
     expect(background).not.toMatch(/^\s*(CREATE POLICY|GRANT|REVOKE|DROP)/im);

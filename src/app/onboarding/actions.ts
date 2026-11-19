@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ZodError } from "zod";
 import {
@@ -106,7 +107,10 @@ const ONBOARDING_VALUE_KEYS = [
   "primaryPurpose",
 ] as const;
 
-/** Reads an uploaded resume (PDF or DOCX) and adds its contents to My Identity. */
+/**
+ * Reads an uploaded resume (PDF or DOCX) and adds its contents to My Identity. Used by
+ * onboarding and by the profile page (for people who skipped it during onboarding).
+ */
 export async function importResumeAction(
   formData: FormData,
 ): Promise<ResumeImportActionResult> {
@@ -116,6 +120,7 @@ export async function importResumeAction(
   }
   try {
     const { summary, profile } = await importResume(file);
+    revalidatePath("/profile");
     const values = Object.fromEntries(
       ONBOARDING_VALUE_KEYS.map((key) => [key, profile[key] ?? ""]),
     );

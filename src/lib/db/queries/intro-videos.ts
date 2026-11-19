@@ -3,11 +3,13 @@ import type { FolioneClient } from "@/lib/db/schema";
 import { AuthorizationError } from "@/lib/supabase/server";
 import {
   cleanCaptions,
+  cleanTrim,
   isIntroBackground,
   PRIVATE_VIDEO_BUCKET,
   PUBLIC_VIDEO_BUCKET,
   type CaptionCue,
   type IntroBackground,
+  type IntroTrim,
   type VideoType,
 } from "@/domains/intro/intro-video";
 
@@ -47,6 +49,7 @@ export type IntroVideoRow = {
     duration: number;
     hasPoster: boolean;
     background: IntroBackground;
+    trim: IntroTrim | null;
     recordedAt: Date;
   } | null;
   captions: CaptionCue[];
@@ -56,8 +59,15 @@ export type IntroVideoRow = {
 
 const BASE_COLUMNS =
   "script,video_id,content_type,byte_size,duration_seconds,has_poster,captions,show_on_website,recorded_at,updated_at";
-/** `background` arrives with docs/sql/milestone-13/003; reads fall back without it. */
-const COLUMNS = `${BASE_COLUMNS},background`;
+/**
+ * Later columns: `background` (docs/sql/milestone-13/003) and `trim_start, trim_end` (004).
+ * Reads fall back step by step while those files have not run yet.
+ */
+const COLUMN_SETS = [
+  `${BASE_COLUMNS},background,trim_start,trim_end`,
+  `${BASE_COLUMNS},background`,
+  BASE_COLUMNS,
+];
 const isMissingColumn = (error: { code?: string }) =>
   error.code === "42703" || error.code === "PGRST204";
 
@@ -75,6 +85,16 @@ function parse(row: Record<string, unknown>): IntroVideoRow {
           background: isIntroBackground(row.background)
             ? row.background
             : "none",
+          trim:
+            row.trim_start == null || row.trim_end == null
+              ? null
+              : cleanTrim(
+                  {
+                    start: Number(row.trim_start),
+                    end: Number(row.trim_end),
+                  },
+                  duration,
+                ),
           recordedAt: new Date(String(row.recorded_at)),
         }
       : null,
@@ -94,9 +114,13 @@ export async function findIntroVideo(
       .select(columns)
       .eq("account_id", userId)
       .maybeSingle();
-  let { data, error } = await read(COLUMNS);
-  if (error && isMissingColumn(error))
-    ({ data, error } = await read(BASE_COLUMNS));
+  let { data, error } = await read(COLUMN_SETS[0]!);
+  for (
+    let i = 1;
+    error && isMissingColumn(error) && i < COLUMN_SETS.length;
+    i++
+  )
+    ({ data, error } = await read(COLUMN_SETS[i]!));
   if (error) throw mapError(error);
   return data ? parse(data as unknown as Record<string, unknown>) : null;
 }
@@ -113,6 +137,8 @@ export type IntroVideoWrite = {
   } | null;
   captions?: CaptionCue[];
   showOnWebsite?: boolean;
+  /** null = play the whole take. A new take resets it unless given. */
+  trim?: IntroTrim | null;
 };
 
 /** Insert-or-update of the caller's own row; only the given fields change. */
@@ -141,6 +167,11 @@ export async function saveIntroVideo(
     // A plain take still saves before 003 has added the column (see the retry below).
     values.background = t?.background ?? "none";
     if (input.captions === undefined) values.captions = [];
+    if (input.trim === undefined) input = { ...input, trim: null };
+  }
+  if (input.trim !== undefined) {
+    values.trim_start = input.trim?.start ?? null;
+    values.trim_end = input.trim?.end ?? null;
   }
   const write = (row: Record<string, unknown>, columns: string) =>
     client
@@ -148,13 +179,28 @@ export async function saveIntroVideo(
       .upsert(row, { onConflict: "account_id" })
       .select(columns)
       .single();
-  let { data, error } = await write(values, COLUMNS);
-  if (error && isMissingColumn(error)) {
-    if (values.background && values.background !== "none")
-      throw new IntroVideoPersistenceError("background_column_missing");
-    const legacy = { ...values };
-    delete legacy.background;
-    ({ data, error } = await write(legacy, BASE_COLUMNS));
+  // Before 003 / 004 have run: drop the newer columns so takes keep saving.
+  let row = values;
+  let { data, error } = await write(row, COLUMN_SETS[0]!);
+  for (
+    let i = 1;
+    error && isMissingColumn(error) && i < COLUMN_SETS.length;
+    i++
+  ) {
+    const keep = COLUMN_SETS[i]!.split(",");
+    const dropped = Object.keys(row).filter(
+      (k) => !keep.includes(k) && k !== "account_id",
+    );
+    // A trim may be lost (the whole take plays); a background may not (a cut-out saved as
+    // plain would show its mask on the website).
+    const lost = dropped.some((k) =>
+      k === "background" ? row[k] !== "none" : false,
+    );
+    if (lost) throw new IntroVideoPersistenceError("column_missing");
+    row = Object.fromEntries(
+      Object.entries(row).filter(([k]) => !dropped.includes(k)),
+    );
+    ({ data, error } = await write(row, COLUMN_SETS[i]!));
   }
   if (error) throw mapError(error);
   return parse(data as unknown as Record<string, unknown>);

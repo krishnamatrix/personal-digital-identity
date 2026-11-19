@@ -77,11 +77,15 @@ The **Your intro** panel shows the saved take, a "Show on my website" switch, th
 
 ## Background effects: blur and cut-out (AD-015)
 
-The recorder offers **Background: Off / Blur / Cut out**. Everything happens in the owner's browser while recording:
+The recorder offers **Background: Off / Blur / Studio / Cut out**. Everything happens in the owner's browser while recording:
 
 - `src/app/website/intro/background-fx.ts`: MediaPipe's selfie segmenter (`@mediapipe/tasks-vision`, pinned) finds the
   person in a 256 px copy of each camera frame. A WebGL 2 compositor then draws one of:
   - **Blur:** the camera picture with the background blurred. This is an ordinary video, played by the normal player.
+  - **Studio:** the room is replaced by a lit studio backdrop drawn by the shader: a seamless sweep, a soft spotlight
+    behind the speaker, a vignette and dither against banding. Four looks: Charcoal, Slate blue, Warm studio, Soft
+    white. The person gets a light grade (auto exposure from their average brightness, a touch of contrast, colour
+    and warmth) and a little light wrap on the edges. There is no beauty filter. An ordinary video.
   - **Cut out:** a **stacked** frame, twice as tall: the camera picture on top and a black-and-white mask of the person
     below. Each half is at most 960 px on its long side.
 - The recorder records that canvas (`captureStream`) plus the microphone, at 3 Mbit/s for stacked takes. The cover
@@ -110,6 +114,23 @@ snapshot (`blur` or `cutout`, absent for none). Storage is unchanged: same bucke
 rooms give soft or speckled edges. Slow devices segment every second or third frame. A hidden browser tab pauses the
 compositor, so stay on the tab while recording.
 
+## Trim
+
+Nothing is re-encoded. The take keeps every frame, and `intro_videos.trim_start / trim_end` (004) say which part plays.
+
+- **Review:** when it opens, `speechBounds` finds where speech starts and ends in the soundtrack, against the room's
+  noise floor. It keeps 0.35 s before and 0.6 s after, and the Review step applies that as a suggested trim with a
+  note. The owner drags the start and end handles, or uses "Start here" / "End here" at the playhead, or "Keep
+  everything". Moving a handle shows that frame. The trim is saved with the take.
+- **Saved intro:** a Trim button edits it later (`saveTrimAction`). It reaches the website on the next publish.
+- **Players:** every intro now uses one custom player (`intro-video-player.tsx`), plain videos included. It starts at
+  the trim start, stops at the trim end (checked every frame) and scales the seek bar and time to the trimmed part.
+  The badge shows the trimmed length, and captions and the transcript cover only that part. Caption times stay in the
+  file's timeline.
+- **Rules:** at least one second must remain (`cleanTrim`, and a CHECK in 004). A new take resets the trim. Before
+  004 runs, a trim is dropped (the whole take plays) and saving one from the saved-intro panel says it is not
+  available yet.
+
 ## SQL (developer runs these; not executed by the app)
 
 - `docs/sql/milestone-13/001-intro-video-storage.sql`: the two buckets and six owner-only Storage policies. Not part of
@@ -119,6 +140,8 @@ compositor, so stay on the tab while recording.
 - `docs/sql/milestone-13/003-intro-video-background.sql`: the `background` column and its CHECK. Part of
   `pnpm validate`. Before it runs, plain takes still save and play (reads fall back to the old columns), and only saving
   a blurred or cut-out take fails.
+- `docs/sql/milestone-13/004-intro-trim-and-studio.sql`: `trim_start` and `trim_end` with their CHECK, and `studio`
+  added to the background CHECK. Part of `pnpm validate`.
 
 Until both are run:
 

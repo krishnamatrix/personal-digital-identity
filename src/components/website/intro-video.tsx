@@ -2,16 +2,16 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { Captions, Play, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
+  cuesWithin,
   formatDuration,
-  toWebVtt,
+  playLength,
   transcriptOf,
   type CaptionCue,
   type PublishedIntro,
 } from "@/domains/intro/intro-video";
-import { trackInsight } from "@/components/insights/page-tracker";
-import { CutoutPlayer } from "@/components/website/cutout-player";
+import { IntroVideoPlayer } from "@/components/website/intro-video-player";
 import { useSeekableDuration } from "@/components/website/use-seekable-duration";
 
 export { useSeekableDuration };
@@ -52,7 +52,7 @@ export function IntroTrigger({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const length = formatDuration(intro.duration);
+  const length = formatDuration(playLength(intro));
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger
@@ -120,10 +120,15 @@ export function IntroPlayer({
   track?: boolean;
   videoRef?: React.RefObject<HTMLVideoElement | null>;
 }) {
-  if (intro.background === "cutout")
-    return (
-      <div>
-        <CutoutPlayer
+  const cutout = intro.background === "cutout";
+  return (
+    <div>
+      <div
+        className={
+          cutout ? "" : "overflow-hidden rounded-2xl bg-black shadow-2xl"
+        }
+      >
+        <IntroVideoPlayer
           intro={intro}
           name={name}
           layout="framed"
@@ -131,89 +136,8 @@ export function IntroPlayer({
           track={track}
           videoRef={videoRef}
         />
-        <Transcript cues={intro.captions ?? []} />
       </div>
-    );
-  return (
-    <PlainPlayer
-      intro={intro}
-      name={name}
-      autoPlay={autoPlay}
-      track={track}
-      videoRef={videoRef}
-    />
-  );
-}
-
-function PlainPlayer({
-  intro,
-  name,
-  autoPlay,
-  track,
-  videoRef,
-}: {
-  intro: PublishedIntro;
-  name: string;
-  autoPlay: boolean;
-  track: boolean;
-  videoRef?: React.RefObject<HTMLVideoElement | null>;
-}) {
-  const ownVideo = useRef<HTMLVideoElement>(null);
-  const video = videoRef ?? ownVideo;
-  const cues = useMemo(() => intro.captions ?? [], [intro.captions]);
-  // A blob: URL for the <track>; made in the browser only (never during server rendering).
-  const [captionsUrl, setCaptionsUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (!cues.length || typeof URL.createObjectURL !== "function") return;
-    const url = URL.createObjectURL(
-      new Blob([toWebVtt(cues)], { type: "text/vtt" }),
-    );
-    setCaptionsUrl(url);
-    return () => {
-      URL.revokeObjectURL(url);
-      setCaptionsUrl(null);
-    };
-  }, [cues]);
-  useSeekableDuration(video, () => {
-    if (autoPlay) void video.current?.play().catch(() => undefined);
-  });
-
-  const completed = useRef(false);
-  return (
-    <div>
-      <div className="overflow-hidden rounded-2xl bg-black shadow-2xl">
-        <video
-          ref={video}
-          className="aspect-video max-h-[72vh] w-full bg-black object-contain"
-          controls
-          playsInline
-          preload="metadata"
-          poster={intro.posterUrl}
-          aria-label={`${name}'s video intro`}
-          onEnded={() => {
-            if (track && !completed.current) {
-              completed.current = true;
-              trackInsight({
-                event: "video_complete",
-                kind: "intro",
-                label: "Video intro",
-              });
-            }
-          }}
-        >
-          <source src={intro.videoUrl} type={intro.type} />
-          {captionsUrl && (
-            <track
-              kind="captions"
-              src={captionsUrl}
-              srcLang="en"
-              label="Captions"
-              default
-            />
-          )}
-        </video>
-      </div>
-      <Transcript cues={cues} />
+      <Transcript cues={cuesWithin(intro.captions ?? [], intro.trim)} />
     </div>
   );
 }

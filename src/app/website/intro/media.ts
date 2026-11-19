@@ -94,8 +94,10 @@ export function encodeWav(samples: Float32Array, sampleRate: number): Blob {
   return new Blob([buffer], { type: "audio/wav" });
 }
 
-/** The recording's soundtrack, resampled to 16 kHz mono (what speech recognition needs). */
-export async function soundtrackWav(media: Blob): Promise<Blob | null> {
+/** The recording's soundtrack as 16 kHz mono samples (for captions and the auto-trim). */
+export async function soundtrackSamples(
+  media: Blob,
+): Promise<{ samples: Float32Array; sampleRate: number } | null> {
   const Ctx =
     window.AudioContext ??
     (window as unknown as { webkitAudioContext?: typeof AudioContext })
@@ -113,12 +115,18 @@ export async function soundtrackWav(media: Blob): Promise<Blob | null> {
     source.connect(offline.destination);
     source.start();
     const rendered = await offline.startRendering();
-    return encodeWav(rendered.getChannelData(0), rate);
+    return { samples: rendered.getChannelData(0), sampleRate: rate };
   } catch {
     return null;
   } finally {
     void ctx.close().catch(() => undefined);
   }
+}
+
+/** The soundtrack as a 16 kHz mono WAV (what speech recognition needs). */
+export async function soundtrackWav(media: Blob): Promise<Blob | null> {
+  const sound = await soundtrackSamples(media);
+  return sound ? encodeWav(sound.samples, sound.sampleRate) : null;
 }
 
 /** PUT to a Storage signed upload URL, reporting progress (0..1). */

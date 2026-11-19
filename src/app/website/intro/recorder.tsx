@@ -30,7 +30,9 @@ import {
   createFxEngine,
   fxSupported,
   loadSegmenter,
+  STUDIO_LOOKS,
   type FxEngine,
+  type StudioLook,
 } from "@/app/website/intro/background-fx";
 import {
   AUDIO_BITS_PER_SECOND,
@@ -55,6 +57,7 @@ export type RecordedTake = {
 const BACKGROUNDS: { id: IntroBackground; label: string }[] = [
   { id: "none", label: "Off" },
   { id: "blur", label: "Blur" },
+  { id: "studio", label: "Studio" },
   { id: "cutout", label: "Cut out" },
 ];
 type FxState = "off" | "loading" | "ready" | "error";
@@ -113,6 +116,7 @@ export function Recorder({
   const prompter = useRef<HTMLDivElement>(null);
   const [background, setBackground] = useState<IntroBackground>("none");
   const [fxState, setFxState] = useState<FxState>("off");
+  const [look, setLook] = useState<StudioLook>("charcoal");
   const [canUseFx, setCanUseFx] = useState(false);
   const engine = useRef<FxEngine | null>(null);
   const fxHost = useRef<HTMLDivElement>(null);
@@ -181,11 +185,7 @@ export function Recorder({
     loadSegmenter()
       .then((segmenter) => {
         if (cancelled) return;
-        created = createFxEngine(
-          video,
-          segmenter,
-          background === "cutout" ? "cutout" : "blur",
-        );
+        created = createFxEngine(video, segmenter, background, look);
         engine.current = created;
         created.canvas.className =
           "absolute inset-0 size-full -scale-x-100 object-cover";
@@ -213,7 +213,7 @@ export function Recorder({
     const e = engine.current;
     if (!e || fxState !== "ready" || background === "none") return;
     e.setMode(background);
-    e.canvas.style.visibility = background === "blur" ? "visible" : "hidden";
+    e.canvas.style.visibility = background === "cutout" ? "hidden" : "visible";
     if (background !== "cutout" || !cutoutPreview.current) {
       e.onFrame(null);
       return;
@@ -233,6 +233,10 @@ export function Recorder({
       renderer.dispose();
     };
   }, [background, fxState]);
+
+  useEffect(() => {
+    engine.current?.setLook(look);
+  }, [look, fxState]);
 
   // ------------------------------------------------------------------- microphone meter
   useEffect(() => {
@@ -790,9 +794,47 @@ export function Recorder({
                 ? "Only you appear on your website, over the page. A plain wall and good light give the cleanest edges."
                 : background === "blur"
                   ? "Your background is blurred in the recording."
-                  : "Records exactly what your camera sees."}
+                  : background === "studio"
+                    ? "A lit studio backdrop replaces your room, with a light touch-up of exposure and colour."
+                    : "Records exactly what your camera sees."}
         </span>
       </div>
+      {background === "studio" && (
+        <div
+          role="radiogroup"
+          aria-label="Studio backdrop"
+          className="flex flex-wrap items-center gap-2"
+        >
+          {(Object.keys(STUDIO_LOOKS) as StudioLook[]).map((id) => {
+            const l = STUDIO_LOOKS[id];
+            return (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={look === id}
+                disabled={recording || phase === "countdown"}
+                onClick={() => setLook(id)}
+                className={cn(
+                  "focus-visible:ring-foreground/20 flex items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50",
+                  look === id
+                    ? "border-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <span
+                  aria-hidden="true"
+                  className="size-6 rounded-full ring-1 ring-black/10"
+                  style={{
+                    background: `radial-gradient(circle at 50% 35%, ${l.light}, ${l.top} 55%, ${l.floor})`,
+                  }}
+                />
+                {l.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {!recording &&
         (devices.cameras.length > 1 || devices.mics.length > 1) && (

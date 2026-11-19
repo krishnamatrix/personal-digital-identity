@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import type { PublishedContent } from "@/domains/website/published-content";
 import { IntroPill, IntroTrigger } from "@/components/website/intro-video";
-import { CutoutPlayer } from "@/components/website/cutout-player";
-import { formatDuration } from "@/domains/intro/intro-video";
+import { IntroVideoPlayer } from "@/components/website/intro-video-player";
+import { formatDuration, playLength } from "@/domains/intro/intro-video";
 
 /**
  * The hero portrait's frame. With a published video intro it becomes the "Watch intro"
@@ -31,16 +31,16 @@ export function WithIntro({
     );
   if (intro.background === "cutout" && badge === "pill")
     return (
-      <CutoutPlayer
+      <IntroVideoPlayer
         intro={intro}
         name={content.person.name}
         layout="inline"
         // A tilted frame suits a photo, not a person standing on the page.
         className={`shrink-0 ${className.replace(/(^|\s)-?rotate-\S+/g, "")}`}
-        idle={<IntroPill length={formatDuration(intro.duration)} />}
+        idle={<IntroPill length={formatDuration(playLength(intro))} />}
       >
         {children}
-      </CutoutPlayer>
+      </IntroVideoPlayer>
     );
   return (
     <IntroTrigger

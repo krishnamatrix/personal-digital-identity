@@ -33,11 +33,13 @@ export const isUuid = (v: string) => UUID.test(v);
  * The background treatment chosen at recording time (done in the owner's browser).
  * - none:   the camera picture as is.
  * - blur:   background blurred into the picture (an ordinary video).
+ * - studio: background replaced by a lit studio backdrop, with a light grade on the person
+ *           (an ordinary video; the backdrop is baked in).
  * - cutout: a "stacked" video: each frame is twice as tall, the picture on top and a
  *           black-and-white mask of the person below. The website player uses the mask to
  *           draw just the person over the page (works in every browser, Safari included).
  */
-export const INTRO_BACKGROUNDS = ["none", "blur", "cutout"] as const;
+export const INTRO_BACKGROUNDS = ["none", "blur", "studio", "cutout"] as const;
 export type IntroBackground = (typeof INTRO_BACKGROUNDS)[number];
 export const isIntroBackground = (v: unknown): v is IntroBackground =>
   (INTRO_BACKGROUNDS as readonly unknown[]).includes(v);
@@ -258,9 +260,89 @@ export const publishedIntroSchema = z.object({
   duration: z.number().positive().max(180),
   captions: captionsSchema.optional(),
   /** Absent = "none". "cutout" means the video and poster are stacked (picture over mask). */
-  background: z.enum(["blur", "cutout"]).optional(),
+  background: z.enum(["blur", "studio", "cutout"]).optional(),
+  /** The part of the file to play (seconds into the file); absent = all of it. */
+  trim: z
+    .object({ start: z.number().min(0), end: z.number().positive() })
+    .refine((t) => t.end > t.start)
+    .optional(),
 });
 export type PublishedIntro = z.infer<typeof publishedIntroSchema>;
+
+// ---------------------------------------------------------------------------------- trim
+
+/** Start / end in seconds into the file. Nothing is re-encoded; players honour it. */
+export type IntroTrim = { start: number; end: number };
+/** A trimmed intro is still at least this long. */
+export const MIN_TRIMMED_SECONDS = 1;
+
+/** A valid trim for a file of `duration` seconds, or null for "play it all". */
+export function cleanTrim(input: unknown, duration: number): IntroTrim | null {
+  if (!input || typeof input !== "object") return null;
+  const { start, end } = input as { start?: unknown; end?: unknown };
+  if (typeof start !== "number" || typeof end !== "number") return null;
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  const s = Math.round(Math.max(0, start) * 100) / 100;
+  const e = Math.round(Math.min(duration, end) * 100) / 100;
+  if (e - s < MIN_TRIMMED_SECONDS) return null;
+  // Trimming nothing is the same as no trim.
+  if (s < 0.05 && e > duration - 0.05) return null;
+  return { start: s, end: e };
+}
+
+/** What a visitor actually watches. */
+export function playLength(intro: { duration: number; trim?: IntroTrim }) {
+  return intro.trim ? intro.trim.end - intro.trim.start : intro.duration;
+}
+
+/** Captions inside the trimmed part (times stay in the file's timeline). */
+export function cuesWithin(cues: CaptionCue[], trim?: IntroTrim | null) {
+  if (!trim) return cues;
+  return cues.filter((c) => c.end > trim.start && c.start < trim.end);
+}
+
+/**
+ * Where speech starts and ends in a soundtrack (mono samples), with a little air kept on
+ * both sides: the automatic trim of "reaching for the button" and "reaching to stop".
+ * The threshold adapts to the room's noise floor. Null when no speech stands out.
+ */
+export function speechBounds(
+  samples: Float32Array,
+  sampleRate: number,
+  { padBefore = 0.35, padAfter = 0.6 } = {},
+): IntroTrim | null {
+  const win = Math.max(1, Math.round(sampleRate * 0.02)); // 20 ms windows
+  const count = Math.floor(samples.length / win);
+  if (count < 10) return null;
+  const rms = new Float32Array(count);
+  for (let w = 0; w < count; w++) {
+    let sum = 0;
+    for (let i = w * win; i < (w + 1) * win; i++) sum += samples[i]! ** 2;
+    rms[w] = Math.sqrt(sum / win);
+  }
+  const sorted = Float32Array.from(rms).sort();
+  const noise = sorted[Math.floor(count * 0.1)]!;
+  const loud = sorted[Math.floor(count * 0.95)]!;
+  if (loud < 0.01 || loud < noise * 3) return null;
+  const threshold = noise + (loud - noise) * 0.15;
+  // Speech = at least 150 ms of windows above the threshold.
+  const run = Math.round(0.15 / 0.02);
+  const sustained = (from: number, step: 1 | -1) => {
+    for (let w = from, n = 0; w >= 0 && w < count; w += step) {
+      n = rms[w]! > threshold ? n + 1 : 0;
+      if (n >= run) return step === 1 ? w - run + 1 : w + run - 1;
+    }
+    return -1;
+  };
+  const first = sustained(0, 1);
+  const last = sustained(count - 1, -1);
+  if (first < 0 || last < first) return null;
+  const total = samples.length / sampleRate;
+  return {
+    start: Math.max(0, (first * win) / sampleRate - padBefore),
+    end: Math.min(total, ((last + 1) * win) / sampleRate + padAfter),
+  };
+}
 
 // --------------------------------------------------------------------- the studio screen
 
@@ -275,6 +357,7 @@ export type StudioTake = {
   posterUrl: string | null;
   captions: CaptionCue[];
   background: IntroBackground;
+  trim: IntroTrim | null;
 };
 
 export type StudioState = {

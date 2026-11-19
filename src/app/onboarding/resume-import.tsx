@@ -33,15 +33,34 @@ function describe(summary: Summary): string[] {
   return lines;
 }
 
+const COPY = {
+  onboarding: {
+    title: "Start from your resume",
+    intro:
+      "Upload a PDF or Word file and we will fill in your profile, experience, education and skills. Optional — you can also fill things in by hand.",
+    done: "Continue to review the details. Everything stays private, and you can edit or remove any of it later in your profile.",
+  },
+  profile: {
+    title: "Import from your resume",
+    intro:
+      "Upload a PDF or Word file and we will add your experience, education and skills. Only empty fields are filled and only new entries are added: nothing you have already written changes.",
+    done: "Review the new entries in each section. Everything stays private until you publish.",
+  },
+} as const;
+
 /**
- * Optional first step: upload a resume and let Folioone fill the profile from it.
+ * Upload a resume and let Folioone fill the profile from it: the optional first step of
+ * onboarding, and again from the profile for anyone who skipped it.
  * The file goes to a server action; the server checks it again (type, size, content).
  */
 export function ResumeImport({
   onImported,
+  variant = "onboarding",
 }: {
   onImported: (values: Record<string, string>) => void;
+  variant?: keyof typeof COPY;
 }) {
+  const copy = COPY[variant];
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -105,8 +124,7 @@ export function ResumeImport({
           </ul>
         )}
         <p className="text-muted-foreground mt-3 text-xs leading-5">
-          Continue to review the details. Everything stays private, and you can
-          edit or remove any of it later in your profile.
+          {copy.done}
         </p>
       </section>
     );
@@ -116,12 +134,10 @@ export function ResumeImport({
     <section aria-labelledby={`${inputId}-title`} className="space-y-3">
       <div>
         <h2 id={`${inputId}-title`} className="text-[15px] font-medium">
-          Start from your resume
+          {copy.title}
         </h2>
         <p className="text-muted-foreground mt-1 text-sm leading-6">
-          Upload a PDF or Word file and we will fill in your profile,
-          experience, education and skills. Optional — you can also fill things
-          in by hand.
+          {copy.intro}
         </p>
       </div>
       <label

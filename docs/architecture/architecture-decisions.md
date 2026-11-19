@@ -143,3 +143,13 @@ records, uploads, validates and plays the same way everywhere. Processing on the
 uploaded for this, and the server needs no video tooling. The price: files about 1.5× larger, a WebGL player (with a
 plain-picture fallback), and captions drawn by us instead of the browser.
 **Details.** `m13-video-intro.md` (Background effects), `docs/sql/milestone-13/003-intro-video-background.sql`.
+
+## AD-016: Video intro trims are stored as start/end times, not re-encoded
+
+**Decision.** Trimming a take saves `trim_start` and `trim_end`. The file keeps every frame, and every player (one
+custom player for all intros) starts and stops at those times. The Review step suggests the trim from where speech
+starts and ends in the soundtrack.
+**Why.** Re-encoding in the browser takes as long as the video and needs extra libraries, and doing it on the server
+needs video tooling. A stored trim is instant, can be changed any time, and costs only the few seconds of extra
+download that visitors never see played.
+**Details.** `m13-video-intro.md` (Trim), `docs/sql/milestone-13/004-intro-trim-and-studio.sql`.

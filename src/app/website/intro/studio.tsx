@@ -6,6 +6,7 @@ import {
   Captions,
   Check,
   FileText,
+  Scissors,
   Sparkles,
   Trash2,
   Video,
@@ -25,8 +26,11 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
+  cleanTrim,
   formatDuration,
   MAX_SCRIPT_CHARS,
+  speechBounds,
+  type IntroTrim,
   readingSeconds,
   SCRIPT_LENGTHS,
   SCRIPT_TONES,
@@ -37,16 +41,15 @@ import {
   type StudioState,
   type StudioTake,
 } from "@/domains/intro/intro-video";
-import {
-  IntroPlayer,
-  useSeekableDuration,
-} from "@/components/website/intro-video";
-import { CutoutPlayer } from "@/components/website/cutout-player";
+import { IntroPlayer } from "@/components/website/intro-video";
+import { formatPrecise, TrimEditor } from "@/app/website/intro/trim-editor";
+import { IntroVideoPlayer } from "@/components/website/intro-video-player";
 import { Recorder, type RecordedTake } from "@/app/website/intro/recorder";
 import {
   canRecord,
   formatBytes,
   frameToJpeg,
+  soundtrackSamples,
   soundtrackWav,
   uploadWithProgress,
 } from "@/app/website/intro/media";
@@ -58,6 +61,7 @@ import {
   draftScriptAction,
   saveCaptionsAction,
   saveScriptAction,
+  saveTrimAction,
   setShowOnWebsiteAction,
 } from "@/app/website/intro/actions";
 
@@ -203,6 +207,7 @@ export function Studio({ initial }: { initial: StudioState }) {
             onCaptions={(captions) =>
               setTake((t) => (t ? { ...t, captions } : t))
             }
+            onTrim={(trim) => setTake((t) => (t ? { ...t, trim } : t))}
             onDeleted={() => {
               setTake(null);
               announce("Video intro deleted.");
@@ -397,16 +402,37 @@ function ReviewStep({
   onSaved: (take: StudioTake) => void;
 }) {
   const video = useRef<HTMLVideoElement>(null);
-  const noVideo = useRef<HTMLVideoElement>(null);
-  const [url] = useState(() => URL.createObjectURL(recorded.video));
+  // Made (and revoked) in an effect, so a remount never leaves a revoked URL behind.
+  const [url, setUrl] = useState<string | null>(null);
+  const [trim, setTrim] = useState<IntroTrim | null>(null);
+  const [autoTrim, setAutoTrim] = useState<IntroTrim | null>(null);
   const [poster, setPoster] = useState<Blob | null>(recorded.poster);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [phase, setPhase] = useState<SavePhase>({ step: "idle" });
   const [notice, setNotice] = useState<Notice>(null);
   const cutout = recorded.background === "cutout";
-  useSeekableDuration(cutout ? noVideo : video);
 
-  useEffect(() => () => URL.revokeObjectURL(url), [url]);
+  // Suggest a trim: from just before you start speaking to just after you finish.
+  useEffect(() => {
+    let cancelled = false;
+    void soundtrackSamples(recorded.audio ?? recorded.video).then((sound) => {
+      if (cancelled || !sound) return;
+      const bounds = speechBounds(sound.samples, sound.sampleRate);
+      const suggested = bounds && cleanTrim(bounds, recorded.duration);
+      if (!suggested) return;
+      setTrim(suggested);
+      setAutoTrim(suggested);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [recorded]);
+
+  useEffect(() => {
+    const u = URL.createObjectURL(recorded.video);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [recorded.video]);
   useEffect(() => {
     if (!poster) return setPosterUrl(null);
     const u = URL.createObjectURL(poster);
@@ -456,6 +482,7 @@ function ReviewStep({
       hasPoster: Boolean(poster && ticket.posterUploadUrl),
       script,
       background: recorded.background,
+      trim,
     });
     if (!done.ok) {
       setPhase({ step: "idle" });
@@ -479,10 +506,12 @@ function ReviewStep({
 
   return (
     <div className="space-y-4">
-      {cutout ? (
-        <div className={`overflow-hidden rounded-2xl ${CUTOUT_BACKDROP}`}>
-          <CutoutPlayer
-            key={posterUrl ?? "none"}
+      <div
+        className={`overflow-hidden rounded-2xl ${cutout ? CUTOUT_BACKDROP : "bg-neutral-950"}`}
+      >
+        {url && (
+          <IntroVideoPlayer
+            key={`${url}:${posterUrl ?? "none"}`}
             intro={{
               videoUrl: url,
               posterUrl: posterUrl ?? undefined,
@@ -491,29 +520,35 @@ function ReviewStep({
                   ? "video/mp4"
                   : "video/webm",
               duration: recorded.duration,
-              background: "cutout",
+              ...(recorded.background !== "none"
+                ? { background: recorded.background }
+                : {}),
+              ...(trim ? { trim } : {}),
             }}
             name="Your recording"
             layout="framed"
             track={false}
             videoRef={video}
           />
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-2xl bg-neutral-950">
-          <video
-            ref={video}
-            src={url}
-            controls
-            playsInline
-            className="aspect-video w-full bg-neutral-950 object-contain"
-            aria-label="Your recording"
-          />
-        </div>
+        )}
+      </div>
+      <TrimEditor
+        duration={recorded.duration}
+        trim={trim}
+        onChange={setTrim}
+        video={video}
+        disabled={busy}
+      />
+      {autoTrim && trim === autoTrim && (
+        <p className="text-muted-foreground -mt-2 text-xs leading-5">
+          Trimmed {formatPrecise(autoTrim.start)} before you start speaking and{" "}
+          {formatPrecise(recorded.duration - autoTrim.end)} after you finish.
+          Drag the handles to change it.
+        </p>
       )}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <span className="tabular-nums">
-          {formatDuration(recorded.duration)}
+          {formatDuration(trim ? trim.end - trim.start : recorded.duration)}
         </span>
         <span className="text-muted-foreground">
           {formatBytes(recorded.video.size)}
@@ -599,6 +634,7 @@ function CurrentIntro({
   showOnWebsite,
   onShowChange,
   onCaptions,
+  onTrim,
   onDeleted,
 }: {
   take: StudioTake | null;
@@ -606,10 +642,16 @@ function CurrentIntro({
   showOnWebsite: boolean;
   onShowChange: (v: boolean) => void;
   onCaptions: (c: CaptionCue[]) => void;
+  onTrim: (trim: IntroTrim | null) => void;
   onDeleted: () => void;
 }) {
   const [confirm, setConfirm] = useState(false);
   const [editing, setEditing] = useState(false);
+  /** While trimming: the draft (undefined = not trimming). */
+  const [draftTrim, setDraftTrim] = useState<IntroTrim | null | undefined>();
+  const video = useRef<HTMLVideoElement>(null);
+  const trimming = draftTrim !== undefined;
+  const shownTrim = trimming ? draftTrim : take?.trim;
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, start] = useTransition();
 
@@ -653,14 +695,74 @@ function CurrentIntro({
               ...(take.background !== "none"
                 ? { background: take.background }
                 : {}),
+              ...(shownTrim ? { trim: shownTrim } : {}),
             }}
             name={name}
             track={false}
+            videoRef={video}
           />
         </div>
       ) : (
         <p className="text-danger text-sm">We could not load your video.</p>
       )}
+
+      {take.videoUrl &&
+        (trimming ? (
+          <div className="space-y-3">
+            <TrimEditor
+              duration={take.duration}
+              trim={draftTrim}
+              onChange={setDraftTrim}
+              video={video}
+              disabled={pending}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={pending}
+                onClick={() => setDraftTrim(undefined)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                busy={pending}
+                disabled={pending}
+                onClick={() =>
+                  start(async () => {
+                    const r = await saveTrimAction(draftTrim);
+                    if (!r.ok) return setNotice({ ok: false, text: r.message });
+                    onTrim(r.take.trim);
+                    setDraftTrim(undefined);
+                    setNotice({
+                      ok: true,
+                      text: "Trim saved. It reaches your website the next time you publish.",
+                    });
+                  })
+                }
+              >
+                Save trim
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground text-xs tabular-nums">
+              {take.trim
+                ? `Plays ${formatPrecise(take.trim.start)} – ${formatPrecise(take.trim.end)}`
+                : "Plays the whole take"}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDraftTrim(take.trim)}
+            >
+              <Scissors aria-hidden className="size-3.5" />
+              Trim
+            </Button>
+          </div>
+        ))}
 
       <label className="flex items-start justify-between gap-4">
         <span>

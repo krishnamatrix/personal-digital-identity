@@ -31,6 +31,7 @@ import {
 import {
   baseVideoType,
   cleanCaptions,
+  cleanTrim,
   isIntroBackground,
   isJpeg,
   isUuid,
@@ -107,6 +108,7 @@ async function studioTake(
     posterUrl,
     captions: row.captions,
     background: row.take.background,
+    trim: row.take.trim,
   };
 }
 
@@ -261,6 +263,8 @@ export async function completeIntroUpload(input: {
   hasPoster: boolean;
   script: string;
   background?: IntroBackground;
+  /** Start / end chosen in the review (seconds into the file). */
+  trim?: { start: number; end: number } | null;
 }): Promise<StudioTake> {
   const contentType = baseVideoType(input.mimeType);
   const background = input.background ?? "none";
@@ -317,6 +321,10 @@ export async function completeIntroUpload(input: {
       hasPoster,
       background,
     },
+    trim: cleanTrim(
+      input.trim,
+      Math.min(input.duration, MAX_RECORDING_SECONDS + 5),
+    ),
   });
   await removeOtherPrivateFiles(client, user.id, take.videoId);
   return (await studioTake(client, user.id, row))!;
@@ -336,6 +344,23 @@ async function removeOtherPrivateFiles(
   } catch (error) {
     logLoadError("intro:cleanup", error);
   }
+}
+
+/** The owner changes which part of the saved take plays (null = all of it). */
+export async function saveIntroTrim(input: unknown): Promise<StudioTake> {
+  const { client, user } = await getAuthenticatedDb();
+  const row = await findIntroVideo(client, user.id);
+  if (!row?.take) throw new IntroVideoInputError("Save a take first.");
+  const trim = cleanTrim(input, row.take.duration);
+  if (input && !trim)
+    throw new IntroVideoInputError("Keep at least one second of your intro.");
+  const saved = await saveIntroVideo(client, user.id, { trim });
+  // Before docs/sql/milestone-13/004 has run the trim cannot be stored: say so.
+  if (trim && !saved.take?.trim)
+    throw new IntroVideoInputError(
+      "Trimming is not available yet. Please try again later.",
+    );
+  return (await studioTake(client, user.id, saved))!;
 }
 
 /** Captions from the take's audio (a 16 kHz mono WAV the browser extracted). */
@@ -397,6 +422,7 @@ export function publishedIntroFor(
     intro.posterUrl = publicVideoUrl(supabaseUrl(), publicPosterPath(take));
   if (row.captions.length) intro.captions = row.captions;
   if (row.take.background !== "none") intro.background = row.take.background;
+  if (row.take.trim) intro.trim = row.take.trim;
   return intro;
 }
 

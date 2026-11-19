@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { EntryListEditor } from "@/app/profile/entry-list-editor";
 import { ProfileFieldsForm } from "@/app/profile/profile-fields-form";
+import { ResumeImportPanel } from "@/app/profile/resume-import-panel";
 import { ProfileImageUpload } from "@/components/profile/profile-image-upload";
 import {
   ProfilePreview,
@@ -79,6 +80,8 @@ type Props = {
   onboarding: { complete: boolean; step: number };
   welcome: boolean;
   initialSection?: string;
+  /** Resume import (needs the AI provider configured); `suggest` = profile still sparse. */
+  resumeImport?: { enabled: boolean; suggest: boolean };
 };
 
 export function ProfileWorkspace({
@@ -90,6 +93,7 @@ export function ProfileWorkspace({
   onboarding,
   welcome,
   initialSection,
+  resumeImport,
 }: Props) {
   const [active, setActive] = useState<SectionId>(
     SECTIONS.some((s) => s.id === initialSection)
@@ -116,6 +120,16 @@ export function ProfileWorkspace({
     (kind: EntryKind, d: boolean) => setDirty(kind, d),
     [setDirty],
   );
+
+  // After a resume import the page re-renders with new data: remount the editors (they keep
+  // their own drafts from `initial`) once it has arrived.
+  const awaitingImport = useRef(false);
+  const [dataVersion, setDataVersion] = useState(0);
+  useEffect(() => {
+    if (!awaitingImport.current) return;
+    awaitingImport.current = false;
+    setDataVersion((v) => v + 1);
+  }, [entries, profileValues]);
 
   useEffect(() => {
     if (dirtySet.size === 0) return;
@@ -163,6 +177,17 @@ export function ProfileWorkspace({
             include in a published presentation later.
           </p>
         </div>
+
+        {resumeImport?.enabled && (
+          <ResumeImportPanel
+            suggest={resumeImport.suggest}
+            hasUnsavedChanges={dirtySet.size > 0}
+            onImported={() => {
+              awaitingImport.current = true;
+              router.refresh();
+            }}
+          />
+        )}
 
         {welcome && onboarding.complete && (
           <p
@@ -253,50 +278,52 @@ export function ProfileWorkspace({
           </p>
 
           {/* All panels stay mounted so unsaved drafts survive switching sections. */}
-          <div hidden={active !== "personal"} className="space-y-8">
-            <ProfileImageUpload
-              initialUrl={imageUrl}
-              name={profileValues.displayName || profileValues.fullName}
-              onChange={() => router.refresh()}
-            />
-            <ProfileFieldsForm
-              section="personal"
-              initial={profileValues}
-              onDirtyChange={profileDirty("personal")}
-            />
-          </div>
-          <div hidden={active !== "professional"} className="space-y-10">
-            <ProfileFieldsForm
-              section="professional"
-              initial={profileValues}
-              onDirtyChange={profileDirty("professional")}
-            />
-            {listEditor("employment")}
-          </div>
-          <div hidden={active !== "education"}>
-            {listEditor("education", false)}
-          </div>
-          <div hidden={active !== "skills"}>{listEditor("skill", false)}</div>
-          <div hidden={active !== "projects"}>
-            {listEditor("project", false)}
-          </div>
-          <div hidden={active !== "social"}>
-            {listEditor("social_link", false)}
-          </div>
-          <div hidden={active !== "featured"}>
-            {listEditor("featured_post", false)}
-          </div>
-          <div hidden={active !== "additional"} className="space-y-10">
-            {LIST_SECTIONS.additional.map((k) => listEditor(k))}
-          </div>
-          <div hidden={active !== "preview"}>
-            {sectionDirtyAny(dirtySet) && (
-              <p className="mb-4 text-xs text-amber-700">
-                The preview shows saved information only. You have unsaved
-                changes.
-              </p>
-            )}
-            <ProfilePreview profile={preview} entries={entries} />
+          <div key={dataVersion} className="contents">
+            <div hidden={active !== "personal"} className="space-y-8">
+              <ProfileImageUpload
+                initialUrl={imageUrl}
+                name={profileValues.displayName || profileValues.fullName}
+                onChange={() => router.refresh()}
+              />
+              <ProfileFieldsForm
+                section="personal"
+                initial={profileValues}
+                onDirtyChange={profileDirty("personal")}
+              />
+            </div>
+            <div hidden={active !== "professional"} className="space-y-10">
+              <ProfileFieldsForm
+                section="professional"
+                initial={profileValues}
+                onDirtyChange={profileDirty("professional")}
+              />
+              {listEditor("employment")}
+            </div>
+            <div hidden={active !== "education"}>
+              {listEditor("education", false)}
+            </div>
+            <div hidden={active !== "skills"}>{listEditor("skill", false)}</div>
+            <div hidden={active !== "projects"}>
+              {listEditor("project", false)}
+            </div>
+            <div hidden={active !== "social"}>
+              {listEditor("social_link", false)}
+            </div>
+            <div hidden={active !== "featured"}>
+              {listEditor("featured_post", false)}
+            </div>
+            <div hidden={active !== "additional"} className="space-y-10">
+              {LIST_SECTIONS.additional.map((k) => listEditor(k))}
+            </div>
+            <div hidden={active !== "preview"}>
+              {sectionDirtyAny(dirtySet) && (
+                <p className="mb-4 text-xs text-amber-700">
+                  The preview shows saved information only. You have unsaved
+                  changes.
+                </p>
+              )}
+              <ProfilePreview profile={preview} entries={entries} />
+            </div>
           </div>
         </div>
       </div>
