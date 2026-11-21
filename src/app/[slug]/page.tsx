@@ -33,7 +33,12 @@ export async function generateMetadata({
     metadataBase: new URL(origin),
     title: { absolute: site.title },
     description: site.description ?? undefined,
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      types: {
+        "text/markdown": `${origin}/${site.slug}/llms.txt`,
+      },
+    },
     openGraph: {
       type: "profile",
       title: site.title,

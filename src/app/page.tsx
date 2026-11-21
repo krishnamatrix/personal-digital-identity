@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   title: { absolute: "Folioone — One identity. Every way you present it." },
   description:
     "Keep your professional story in one private place and publish it as a portfolio website, in the design that fits each audience.",
+  alternates: {
+    types: {
+      "text/markdown": "/llms.txt",
+    },
+  },
 };
 
 /** Signed-in people land on their workspace; everyone else sees the landing page. */
