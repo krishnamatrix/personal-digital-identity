@@ -9,6 +9,7 @@ import type {
   ResolvedField,
   ResolvedPersona,
 } from "@/domains/personas/persona-types";
+import type { ExtractedSectionItem } from "@/domains/personas/persona-extraction-schema";
 
 type Props = {
   preview: ResolvedPersona;
@@ -17,6 +18,8 @@ type Props = {
   purpose?: string | null;
   /** Shown when the user has unsaved edits the preview does not reflect. */
   unsavedNote?: boolean;
+  /** Optional extracted section items (e.g. from an uploaded document) shown in preview. */
+  sectionContent?: Partial<Record<string, ExtractedSectionItem[]>>;
 };
 
 /**
@@ -30,6 +33,7 @@ export function PersonaPreview({
   audience,
   purpose,
   unsavedNote,
+  sectionContent,
 }: Props) {
   const [frame, setFrame] = useState<"desktop" | "mobile">("desktop");
   const [showProvenance, setShowProvenance] = useState(false);
@@ -138,6 +142,40 @@ export function PersonaPreview({
                         ))}
                       </div>
                     )
+                  ) : (sectionContent?.[section.sectionKey]?.length ?? 0) >
+                    0 ? (
+                    <ul className="mt-4 space-y-4">
+                      {sectionContent![section.sectionKey]!.map(
+                        (item, index) => (
+                          <li
+                            key={`${section.sectionKey}-${index}-${item.title}`}
+                            className="space-y-1"
+                          >
+                            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                              <p className="text-sm font-medium">
+                                {item.title}
+                                {item.subtitle && (
+                                  <span className="text-muted-foreground font-normal">
+                                    {" "}
+                                    · {item.subtitle}
+                                  </span>
+                                )}
+                              </p>
+                              {item.period && (
+                                <span className="text-muted-foreground text-xs">
+                                  {item.period}
+                                </span>
+                              )}
+                            </div>
+                            {item.description && (
+                              <p className="text-muted-foreground text-sm leading-6 break-words whitespace-pre-line">
+                                {item.description}
+                              </p>
+                            )}
+                          </li>
+                        ),
+                      )}
+                    </ul>
                   ) : (
                     <p className="text-muted-foreground mt-3 text-sm">
                       Nothing to show here yet.

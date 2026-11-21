@@ -1,15 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  CheckCircle2,
+  Loader2,
+  Upload,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LiveRegions, useAnnouncer } from "@/components/ui/live-region";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { createPersonaAction } from "@/app/personas/actions";
+import type {
+  PersonaSectionContentMap,
+  PersonaType,
+  PersonaUploadDraft,
+} from "@/domains/personas/persona-extraction-schema";
 import { PersonaPreview } from "@/app/personas/persona-preview";
 import {
   FailureAlert,
@@ -50,6 +61,7 @@ type Draft = {
   order: ProfileFieldKey[];
   fields: Record<ProfileFieldKey, FieldDraft>;
   sectionVisible: Record<string, boolean>;
+  sectionContent: PersonaSectionContentMap;
   makeDefault: boolean;
 };
 
@@ -80,22 +92,40 @@ function initialDraft(starter: string): Draft {
     sectionVisible: Object.fromEntries(
       STARTER_SECTIONS.map((s) => [s.key, false]),
     ),
+    sectionContent: {},
     makeDefault: false,
   };
 }
+
+const UPLOAD_ACCEPT =
+  ".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown";
+const UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
+const ALLOWED_UPLOAD_EXTENSIONS = [".pdf", ".docx", ".txt", ".md"];
+
+const UPLOAD_PROGRESS_STAGES = [
+  "Reading your document…",
+  "Converting document to clean Markdown…",
+  "Identifying the best Persona type…",
+  "Extracting experience, skills, projects, and highlights…",
+  "Preparing your Persona draft for review…",
+] as const;
 
 export function PersonaCreateFlow({
   canonical,
   canonicalAvailable,
   storageKind,
   starter = "",
+  uploadEnabled = false,
 }: {
   canonical: CanonicalProfile;
   canonicalAvailable: boolean;
   storageKind: string;
   starter?: string;
+  uploadEnabled?: boolean;
 }) {
   const router = useRouter();
+  const uploadInputId = useId();
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   const { announcements, announce } = useAnnouncer();
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Draft>(() =>
@@ -108,6 +138,14 @@ export function PersonaCreateFlow({
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [formError, setFormError] = useState("");
   const [formCode, setFormCode] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadingFileName, setUploadingFileName] = useState("");
+  const [uploadStage, setUploadStage] = useState(0);
+  const [uploadNotice, setUploadNotice] = useState("");
+  const [detectedType, setDetectedType] = useState<PersonaType | null>(null);
+  const [detectedReason, setDetectedReason] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadErrorCode, setUploadErrorCode] = useState("");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const initialDraftJson = useRef<string | null>(null);
@@ -123,6 +161,19 @@ export function PersonaCreateFlow({
     if (mounted.current) headingRef.current?.focus();
     mounted.current = true;
   }, [step]);
+
+  useEffect(() => {
+    if (!uploading) {
+      setUploadStage(0);
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setUploadStage((current) =>
+        current < UPLOAD_PROGRESS_STAGES.length - 1 ? current + 1 : current,
+      );
+    }, 2400);
+    return () => window.clearInterval(timer);
+  }, [uploading]);
 
   // Closing or reloading the tab with an unsaved draft asks for confirmation.
   useEffect(() => {
@@ -155,6 +206,145 @@ export function PersonaCreateFlow({
     announce(
       `${PROFILE_FIELDS[key].label} moved ${direction < 0 ? "up" : "down"}.`,
     );
+  }
+
+  async function handleFileUpload(file: File | undefined) {
+    if (!file) return;
+    setUploadError("");
+    setUploadErrorCode("");
+    setUploadNotice("");
+
+    const lowerName = file.name.toLowerCase();
+    if (!ALLOWED_UPLOAD_EXTENSIONS.some((ext) => lowerName.endsWith(ext))) {
+      const msg = "Upload a PDF, Word (.docx), or plain-text (.txt, .md) file.";
+      setUploadError(msg);
+      announce(msg, "assertive");
+      return;
+    }
+    if (file.size === 0) {
+      const msg = "The file is empty.";
+      setUploadError(msg);
+      announce(msg, "assertive");
+      return;
+    }
+    if (file.size > UPLOAD_MAX_BYTES) {
+      const msg = "Upload a file of 5 MB or less.";
+      setUploadError(msg);
+      announce(msg, "assertive");
+      return;
+    }
+
+    setUploading(true);
+    setUploadingFileName(file.name);
+    setUploadStage(0);
+    const form = new FormData();
+    form.set("file", file);
+
+    let result:
+      | { ok: true; data: PersonaUploadDraft }
+      | { ok: false; code: string; message: string };
+    try {
+      const response = await fetch("/api/llm/persona-document", {
+        method: "POST",
+        body: form,
+      });
+      result = (await response.json()) as
+        | { ok: true; data: PersonaUploadDraft }
+        | { ok: false; code: string; message: string };
+    } catch {
+      result = {
+        ok: false,
+        code: "extraction_failed",
+        message:
+          "We could not reach the extraction service. Please try again or fill in the fields manually.",
+      };
+    }
+    setUploading(false);
+
+    if (!result.ok) {
+      setUploadError(result.message);
+      setUploadErrorCode(result.code);
+      announce(result.message, "assertive");
+      return;
+    }
+
+    const extracted = result.data;
+    const suggestedName =
+      extracted.name ??
+      (extracted.personaType !== "Other" ? extracted.personaType : null);
+    const filled: string[] = [];
+    if (suggestedName) filled.push("name");
+    if (extracted.audience) filled.push("audience");
+    if (extracted.purpose) filled.push("purpose");
+    if (extracted.description) filled.push("description");
+    if (extracted.headline) filled.push("headline");
+    if (extracted.summary) filled.push("summary");
+    if (extracted.suggestedSections.length > 0) {
+      filled.push("sections");
+    }
+
+    setDetectedType(extracted.personaType);
+    setDetectedReason(extracted.personaTypeReason);
+
+    setDraft((current) => {
+      const nextFields = { ...current.fields };
+      const nextSections = { ...current.sectionVisible };
+
+      for (const sectionKey of extracted.suggestedSections) {
+        if (sectionKey in nextSections) {
+          nextSections[sectionKey] = true;
+        }
+      }
+      for (const sectionKey of Object.keys(extracted.sectionContent ?? {})) {
+        if (sectionKey in nextSections) {
+          nextSections[sectionKey] = true;
+        }
+      }
+
+      const extractedProfileFields: [
+        ProfileFieldKey,
+        string | null | undefined,
+      ][] = [
+        ["display_name", extracted.displayName],
+        ["headline", extracted.headline],
+        ["summary", extracted.summary],
+        ["location", extracted.location],
+        ["website_url", extracted.websiteUrl],
+        ["linkedin_url", extracted.linkedinUrl],
+        ["github_url", extracted.githubUrl],
+      ];
+
+      for (const [fieldKey, value] of extractedProfileFields) {
+        if (value) {
+          nextFields[fieldKey] = {
+            ...nextFields[fieldKey],
+            isIncluded: true,
+            mode: "custom",
+            text: value,
+          };
+          nextSections.profile = true;
+        }
+      }
+
+      return {
+        ...current,
+        name: suggestedName ?? current.name,
+        audience: extracted.audience ?? current.audience,
+        purpose: extracted.purpose ?? current.purpose,
+        description: extracted.description ?? current.description,
+        fields: nextFields,
+        sectionVisible: nextSections,
+        sectionContent: extracted.sectionContent ?? current.sectionContent,
+      };
+    });
+
+    setErrors({});
+    const summary =
+      filled.length > 0
+        ? `Detected ${extracted.personaType} persona and filled ${filled.join(", ")} from ${file.name}. Review and edit before creating.`
+        : `Detected ${extracted.personaType} persona from ${file.name}. Review and edit before creating.`;
+    setUploadNotice(summary);
+    announce(summary);
   }
 
   function validateStep(target: number): Record<string, string[]> {
@@ -257,6 +447,9 @@ export function PersonaCreateFlow({
         label: null,
         isVisible: draft.sectionVisible[section.key] ?? false,
       })),
+      ...(Object.keys(draft.sectionContent).length > 0
+        ? { sectionContent: draft.sectionContent }
+        : {}),
       makeDefault: draft.makeDefault,
     });
     setSaving(false);
@@ -320,8 +513,8 @@ export function PersonaCreateFlow({
             <ul className="list-disc pl-5">
               {Object.values(errors)
                 .flat()
-                .map((message) => (
-                  <li key={message}>{message}</li>
+                .map((message, index) => (
+                  <li key={`${index}-${message}`}>{message}</li>
                 ))}
             </ul>
           </FailureAlert>
@@ -345,6 +538,117 @@ export function PersonaCreateFlow({
 
         {step === 0 && (
           <div className="space-y-5">
+            <div className="border-border bg-muted/30 flex flex-wrap items-center justify-between gap-3 rounded-md border p-4">
+              <div className="min-w-0 space-y-1">
+                <p className="text-sm font-medium">
+                  Prefill from a document (optional)
+                </p>
+                <p className="text-muted-foreground text-xs leading-5">
+                  {uploadEnabled
+                    ? "Upload a PDF, Word (.docx), or text file (up to 5 MB) to suggest Persona details. Nothing is saved until the final step."
+                    : "AI document upload is not configured right now — enter your Persona details below."}
+                </p>
+              </div>
+              <div className="shrink-0">
+                <input
+                  ref={uploadInputRef}
+                  id={uploadInputId}
+                  type="file"
+                  accept={UPLOAD_ACCEPT}
+                  aria-label="Upload persona details file"
+                  className="sr-only"
+                  disabled={!uploadEnabled || uploading || saving}
+                  onChange={(event) => {
+                    const selected = event.target.files?.[0];
+                    event.target.value = "";
+                    void handleFileUpload(selected);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  pending={uploading}
+                  disabled={!uploadEnabled || uploading || saving}
+                  onClick={() => uploadInputRef.current?.click()}
+                >
+                  <Upload className="size-4" aria-hidden="true" />
+                  {uploading ? "Extracting…" : "Upload persona details"}
+                </Button>
+              </div>
+            </div>
+
+            {uploading && (
+              <div
+                aria-live="polite"
+                data-testid="persona-upload-progress"
+                className="border-accent/25 bg-accent-soft/40 space-y-2 rounded-md border px-4 py-3 text-sm"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Loader2
+                    className="text-accent size-4 shrink-0 animate-spin"
+                    aria-hidden="true"
+                  />
+                  <span className="font-medium">
+                    {UPLOAD_PROGRESS_STAGES[uploadStage]}
+                  </span>
+                  <span className="text-muted-foreground ml-auto text-xs">
+                    {uploadStage + 1} / {UPLOAD_PROGRESS_STAGES.length}
+                  </span>
+                </div>
+                <p className="text-muted-foreground pl-6 text-xs leading-5">
+                  Processing{" "}
+                  <span className="text-foreground font-medium">
+                    {uploadingFileName}
+                  </span>
+                  . Nothing is saved automatically — you will review every field
+                  before creating.
+                </p>
+              </div>
+            )}
+
+            {uploadNotice && (
+              <div
+                role="status"
+                className="border-success/25 bg-success-soft/60 space-y-2 rounded-md border px-4 py-3 text-sm"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <CheckCircle2
+                    className="text-success size-4 shrink-0"
+                    aria-hidden="true"
+                  />
+                  {detectedType && (
+                    <span className="border-accent/30 bg-accent-soft text-accent rounded-full border px-2.5 py-0.5 text-xs font-semibold">
+                      Detected type: {detectedType}
+                    </span>
+                  )}
+                  <span>{uploadNotice}</span>
+                </div>
+                {detectedReason && (
+                  <p className="text-muted-foreground pl-6 text-xs leading-5">
+                    {detectedReason}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {uploadError && (
+              <FailureAlert
+                title={
+                  uploadErrorCode === "unauthenticated"
+                    ? SIGNED_OUT_TITLE
+                    : "Could not upload persona details"
+                }
+                actions={
+                  uploadErrorCode === "unauthenticated" ? (
+                    <SignInAction />
+                  ) : undefined
+                }
+              >
+                {uploadError}
+              </FailureAlert>
+            )}
+
             <TextField
               id="persona-name"
               label="Name"
@@ -518,6 +822,11 @@ export function PersonaCreateFlow({
                         }
                       />
                       <span>{section.label}</span>
+                      {(draft.sectionContent[section.key]?.length ?? 0) > 0 && (
+                        <span className="text-muted-foreground ml-auto text-xs">
+                          {draft.sectionContent[section.key]!.length} extracted
+                        </span>
+                      )}
                     </label>
                   </li>
                 ))}
@@ -617,6 +926,7 @@ export function PersonaCreateFlow({
               personaName={draft.name || "Untitled Persona"}
               audience={draft.audience}
               purpose={draft.purpose}
+              sectionContent={draft.sectionContent}
             />
             <label className="border-border flex items-center gap-3 rounded-md border p-4 text-sm">
               <Switch

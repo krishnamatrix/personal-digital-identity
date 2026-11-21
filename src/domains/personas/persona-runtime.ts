@@ -1,6 +1,6 @@
 import "server-only";
 import { getAuthenticatedDb } from "@/lib/db/query";
-import { findProfile } from "@/lib/db/query";
+import { findCanonicalProfile } from "@/lib/db/query";
 import { InMemoryPersonaRepository } from "@/domains/personas/persona-memory-repository";
 import type { PersonaRepository } from "@/domains/personas/persona-repository";
 import { createPersonaService } from "@/domains/personas/persona-service";
@@ -59,7 +59,7 @@ export function getPersonaService() {
         // Read-only: findProfile is a SELECT and never creates or updates the
         // Master Identity profile (unlike getOwnProfile).
         loadCanonicalProfile: async () => {
-          const profile = await findProfile(client, user.id);
+          const profile = await findCanonicalProfile(client, user.id);
           return {
             displayName: profile?.displayName ?? null,
             headline: profile?.headline ?? null,
