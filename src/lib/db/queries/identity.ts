@@ -10,6 +10,9 @@ import {
 const PROFILE_COLUMNS =
   "account_id,display_name,full_name,headline,summary,location,website_url,linkedin_url,github_url,profile_image_url,cover_image_url,contact_email,phone,current_designation,current_organization,industry,professional_summary,primary_purpose,onboarding_step,onboarding_completed_at,created_at,updated_at";
 
+const CANONICAL_PERSONA_COLUMNS =
+  "display_name,headline,summary,location,website_url,linkedin_url,github_url";
+
 type QueryClient = FolioneClient;
 
 const viewerProfileSchema = profileSchema.pick({
@@ -55,6 +58,42 @@ export async function findViewerProfile(
         headline: data.headline,
       })
     : null;
+}
+
+/**
+ * Read-only lookup of the seven baseline identity columns used by Personas.
+ * Selects only the M2 baseline columns so Persona flows work across both M2
+ * and expanded M4+ schemas without failing on missing optional columns.
+ */
+export async function findCanonicalProfile(
+  client: QueryClient,
+  verifiedUserId: string,
+): Promise<{
+  displayName: string | null;
+  headline: string | null;
+  summary: string | null;
+  location: string | null;
+  websiteUrl: string | null;
+  linkedinUrl: string | null;
+  githubUrl: string | null;
+} | null> {
+  const { data, error } = await client
+    .from("identity_profiles")
+    .select(CANONICAL_PERSONA_COLUMNS)
+    .eq("account_id", verifiedUserId)
+    .maybeSingle();
+
+  if (error) throw mapProfileError(error);
+  if (!data) return null;
+  return {
+    displayName: data.display_name ?? null,
+    headline: data.headline ?? null,
+    summary: data.summary ?? null,
+    location: data.location ?? null,
+    websiteUrl: data.website_url ?? null,
+    linkedinUrl: data.linkedin_url ?? null,
+    githubUrl: data.github_url ?? null,
+  };
 }
 
 export class ProfilePersistenceError extends Error {

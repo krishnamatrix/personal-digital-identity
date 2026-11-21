@@ -26,6 +26,11 @@ import {
   sectionInputSchema,
   versionSchema,
 } from "@/domains/personas/persona-schema";
+import {
+  deletePersonaSectionContent,
+  getPersonaSectionContent,
+  setPersonaSectionContent,
+} from "@/domains/personas/persona-section-content-cache";
 import type {
   BulkAction,
   BulkSummary,
@@ -85,11 +90,17 @@ export function createPersonaService({
     } catch {
       canonicalAvailable = false;
     }
+    const sectionContent =
+      persona.sectionContent ??
+      getPersonaSectionContent(context.accountId, persona.id);
+    const enriched: PersonaDetail = sectionContent
+      ? { ...persona, sectionContent }
+      : persona;
     return {
-      persona,
+      persona: enriched,
       canonical,
       canonicalAvailable,
-      preview: resolvePersona(persona, canonical),
+      preview: resolvePersona(enriched, canonical),
     };
   }
 
@@ -160,6 +171,13 @@ export function createPersonaService({
         context.accountId,
         normalized,
       );
+      if (normalized.sectionContent) {
+        setPersonaSectionContent(
+          context.accountId,
+          created.id,
+          normalized.sectionContent,
+        );
+      }
       return editorData(context, created);
     },
 
@@ -379,10 +397,12 @@ export function createPersonaService({
         name: newName,
       });
       const context = await getContext();
-      return editorData(
-        context,
-        await repository.duplicate(context.accountId, id, name),
-      );
+      const copied = await repository.duplicate(context.accountId, id, name);
+      const sourceContent = getPersonaSectionContent(context.accountId, id);
+      if (sourceContent) {
+        setPersonaSectionContent(context.accountId, copied.id, sourceContent);
+      }
+      return editorData(context, copied);
     },
 
     /** Permanent deletion. The repository refuses anything but an archived Persona. */
@@ -390,7 +410,9 @@ export function createPersonaService({
       const id = idSchema.parse(personaId);
       const version = versionSchema.parse(expectedVersion);
       const context = await getContext();
-      return repository.delete(context.accountId, id, version);
+      const deletedId = await repository.delete(context.accountId, id, version);
+      deletePersonaSectionContent(context.accountId, id);
+      return deletedId;
     },
   };
 }
@@ -466,11 +488,15 @@ function normalizeCreate(
     };
   });
 
+  const hasSectionContent =
+    parsed.sectionContent && Object.keys(parsed.sectionContent).length > 0;
+
   return {
     metadata: parsed.metadata,
     selections,
     overrides,
     sections,
+    ...(hasSectionContent ? { sectionContent: parsed.sectionContent } : {}),
     makeDefault: parsed.makeDefault,
   };
 }

@@ -1,4 +1,5 @@
 import type { ProfileFieldKey } from "@/domains/personas/persona-constants";
+import type { PersonaSectionContentMap } from "@/domains/personas/persona-extraction-schema";
 
 export type PersonaStatus = "active" | "archived";
 
@@ -52,6 +53,7 @@ export type PersonaDetail = {
   selections: FieldSelection[];
   overrides: FieldOverride[];
   sections: SectionConfig[];
+  sectionContent?: PersonaSectionContentMap;
   revisionCount: number;
 };
 
@@ -91,6 +93,7 @@ export type NormalizedPersonaCreate = {
   selections: FieldSelection[];
   overrides: { fieldKey: ProfileFieldKey; value: string | null }[];
   sections: SectionConfig[];
+  sectionContent?: PersonaSectionContentMap;
   makeDefault: boolean;
 };
 
@@ -194,5 +197,6 @@ export type CreatePersonaInputLike = {
     override: { mode: "identity" } | { mode: "custom"; value: string | null };
   }[];
   sections: { sectionKey: string; label: string | null; isVisible: boolean }[];
+  sectionContent?: PersonaSectionContentMap;
   makeDefault: boolean;
 };
