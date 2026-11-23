@@ -4,6 +4,7 @@ import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { PersonaCreateFlow } from "@/app/personas/persona-create-flow";
 import { PersonaUnavailable } from "@/app/personas/persona-unavailable";
 import { getPersonaService } from "@/domains/personas/persona-runtime";
+import { isPersonaExtractionConfigured } from "@/lib/ai/persona-extractor";
 import { AuthenticationRequiredError } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Create Persona" };
@@ -26,6 +27,7 @@ export default async function NewPersonaPage({
           canonicalAvailable={canonicalAvailable}
           storageKind={service.storageKind}
           starter={starter}
+          uploadEnabled={isPersonaExtractionConfigured()}
         />
       </WorkspaceShell>
     );

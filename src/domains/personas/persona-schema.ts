@@ -6,6 +6,11 @@ import {
   STARTER_SECTION_KEYS,
   validateOverrideValue,
 } from "@/domains/personas/persona-constants";
+import {
+  SECTION_ITEM_LIMITS,
+  type PersonaSectionContentMap,
+  type StarterSectionKey,
+} from "@/domains/personas/persona-extraction-schema";
 
 // Isomorphic: imported by client forms for immediate validation and by the
 // service for authoritative validation. Limits match the proposed SQL CHECKs.
@@ -79,6 +84,52 @@ const overrideSettingSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("custom"), value: z.string().nullable() }),
 ]);
 
+const storedSectionItemSchema = z.object({
+  title: z.string().trim().min(1).max(SECTION_ITEM_LIMITS.title),
+  subtitle: z
+    .string()
+    .trim()
+    .max(SECTION_ITEM_LIMITS.subtitle)
+    .nullable()
+    .transform((v) => v || null),
+  period: z
+    .string()
+    .trim()
+    .max(SECTION_ITEM_LIMITS.period)
+    .nullable()
+    .transform((v) => v || null),
+  description: z
+    .string()
+    .trim()
+    .max(SECTION_ITEM_LIMITS.description)
+    .nullable()
+    .transform((v) => v || null),
+});
+
+const VALID_SECTION_SET = new Set<string>(STARTER_SECTION_KEYS);
+
+const sectionContentMapSchema = z
+  .record(
+    z.string(),
+    z
+      .array(storedSectionItemSchema)
+      .max(SECTION_ITEM_LIMITS.maxItemsPerSection),
+  )
+  .transform((record): PersonaSectionContentMap => {
+    const out: PersonaSectionContentMap = {};
+    for (const [key, items] of Object.entries(record)) {
+      if (
+        VALID_SECTION_SET.has(key) &&
+        key !== "profile" &&
+        items &&
+        items.length > 0
+      ) {
+        out[key as StarterSectionKey] = items;
+      }
+    }
+    return out;
+  });
+
 /** The complete four-step create flow, saved in one service operation. */
 export const createPersonaInputSchema = z
   .object({
@@ -95,6 +146,7 @@ export const createPersonaInputSchema = z
       )
       .max(PROFILE_FIELD_KEYS.length),
     sections: z.array(sectionInputSchema).max(STARTER_SECTION_KEYS.length),
+    sectionContent: sectionContentMapSchema.optional(),
     makeDefault: z.boolean(),
   })
   .superRefine((input, ctx) => {

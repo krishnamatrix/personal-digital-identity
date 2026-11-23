@@ -953,6 +953,7 @@ export function PersonaEditor({
               audience={persona.audience}
               purpose={persona.purpose}
               unsavedNote={unsaved}
+              sectionContent={persona.sectionContent}
             />
           </section>
         </TabsContent>

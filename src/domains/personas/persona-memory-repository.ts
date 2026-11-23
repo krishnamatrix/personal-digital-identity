@@ -115,6 +115,9 @@ export class InMemoryPersonaRepository implements PersonaRepository {
         selections: input.selections.map((s) => ({ ...s })),
         overrides: input.overrides.map((o) => ({ ...o, version: 1 })),
         sections: input.sections.map((s) => ({ ...s })),
+        ...(input.sectionContent
+          ? { sectionContent: clone(input.sectionContent) }
+          : {}),
         revisions: [],
       };
       draft.push(created);
