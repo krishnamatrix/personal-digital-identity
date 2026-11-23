@@ -14,6 +14,7 @@ import {
   Link2,
   Menu,
   PenLine,
+  Sparkles,
   Star,
   UserRound,
   UsersRound,
@@ -52,6 +53,7 @@ const groups = [
     title: "MY PRESENCE",
     links: [
       { label: "My Website", href: "/website", icon: Globe },
+      { label: "Folio Designer", href: "/designer", icon: Sparkles },
       { label: "Digital Cards", href: "/cards", icon: IdCard },
       { label: "Video Intro", href: "/website/intro", icon: Video },
       { label: "Insights", href: "/insights", icon: BarChart3 },

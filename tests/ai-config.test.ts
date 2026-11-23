@@ -160,4 +160,28 @@ describe("unified LLM provider settings", () => {
     vi.stubEnv("AI_PROVIDER", "unknown");
     expect(getAiConfiguration()).toMatchObject({ providerName: "local" });
   });
+  it("configures OpenRouter with its default endpoint, model, and API key", () => {
+    vi.stubEnv("llm_provider", "openrouter");
+    vi.stubEnv("AI_API_KEY", "old-local-key");
+    expect(getAiConfiguration()).toBeNull();
+
+    vi.stubEnv("OPENROUTER_API_KEY", "or-test-key");
+    expect(getAiConfiguration()).toMatchObject({
+      provider: "openai-compatible",
+      providerName: "openrouter",
+      model: "openrouter/auto",
+      apiKey: "or-test-key",
+      endpoints: { chat: "https://openrouter.ai/api/v1/chat/completions" },
+    });
+
+    vi.stubEnv("llm_model", "anthropic/claude-sonnet-4");
+    vi.stubEnv("llm_fallback_model", "google/gemini-2.5-pro");
+    vi.stubEnv("llm_api_key", "or-preferred-key");
+    expect(getAiConfiguration()).toMatchObject({
+      providerName: "openrouter",
+      model: "anthropic/claude-sonnet-4",
+      fallbackModel: "google/gemini-2.5-pro",
+      apiKey: "or-preferred-key",
+    });
+  });
 });

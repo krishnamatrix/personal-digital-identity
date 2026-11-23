@@ -67,6 +67,19 @@ export default async function PublicSitePage({
     getPublicArticles(site.slug).catch(() => []),
     publicIdFor("website", site.slug),
   ]);
+  if (site.content.customDesign) {
+    return (
+      <>
+        <iframe
+          title={site.content.customDesign.title}
+          srcDoc={site.content.customDesign.html}
+          sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+          className="fixed inset-0 h-screen w-screen border-0 bg-black"
+        />
+        {trackId && <PageTracker surface="website" id={trackId} />}
+      </>
+    );
+  }
   return (
     <>
       <SiteView

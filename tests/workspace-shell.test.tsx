@@ -25,6 +25,7 @@ describe("WorkspaceShell navigation", () => {
       ["Profile", "/profile"],
       ["Articles & Thoughts", "/articles"],
       ["My Website", "/website"],
+      ["Folio Designer", "/designer"],
       ["Digital Cards", "/cards"],
       ["Video Intro", "/website/intro"],
       ["Insights", "/insights"],
