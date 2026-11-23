@@ -50,3 +50,11 @@ import the database layer. `pnpm check:db-boundary` (part of `pnpm validate`) en
 ## Commits and Pull Requests
 
 Concise, imperative commit subjects (for example, `Add profile validation`). PRs summarize the change and design choices, link issues, include screenshots for visual changes, and list tests run and follow-ups.
+
+## Active Technologies
+- TypeScript; Node >=20.9; verify pinned versions in package.json. + Next.js App Router, React, Tailwind/shadcn, Zod, pnpm. (feat/llms.txt)
+- TypeScript 5.9.x; Node `>=20.9.0` (`package.json`). + Next.js 15.5.x App Router, React 19.x, Zod 4.x, Tailwind/shadcn, existing `src/lib/ai/openai-compatible.ts` + `config.ts` (`002-local-ai-gateway`). Zero new npm packages expected. (feat/llms.txt)
+- Existing `websites` draft (`theme`, `config` jsonb) via `src/lib/db/queries/website.ts` → `saveDraft`; no new tables. (feat/llms.txt)
+
+## Recent Changes
+- feat/llms.txt: Added TypeScript; Node >=20.9; verify pinned versions in package.json. + Next.js App Router, React, Tailwind/shadcn, Zod, pnpm.

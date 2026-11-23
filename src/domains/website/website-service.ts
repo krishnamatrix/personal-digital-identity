@@ -12,6 +12,7 @@ import {
   websiteConfigSchema,
   THEME_IDS,
   type ThemeId,
+  type WebsiteConfig,
   type WebsiteStatus,
 } from "@/domains/website/config";
 import {
@@ -205,6 +206,53 @@ export class PublishBlockedError extends Error {
   }
 }
 
+export class NoWebsiteAddressError extends Error {
+  constructor() {
+    super("Choose your website address on My Website before publishing.");
+    this.name = "NoWebsiteAddressError";
+  }
+}
+
+export async function getOwnerWebsiteSlug(): Promise<string | null> {
+  const { client, user } = await getAuthenticatedDb();
+  await ensureAccount(client, user.id);
+  const site = await findSite(client, user.id);
+  return site?.slug ?? null;
+}
+
+const customDesignPublishSchema = z.object({
+  title: z.string().trim().min(1).max(160),
+  html: z.string().min(1).max(250_000),
+});
+
+/** Publishes a Folio Designer standalone HTML snapshot to the owner's live website address. */
+export async function publishCustomWebsiteDesign(input: {
+  title: string;
+  html: string;
+}): Promise<{ slug: string; publishedAt: Date }> {
+  const { title, html } = customDesignPublishSchema.parse(input);
+  const { client, user, source } = await loadSource();
+  const site = await findSite(client, user.id);
+  if (!site) throw new NoWebsiteAddressError();
+  const content = buildPublishedContent(source, site.config);
+  const seo = defaultSeo(content);
+  const theme =
+    isProWebsiteTheme(site.theme) && !(await hasActivePro(client, user.id))
+      ? ("professional" as ThemeId)
+      : site.theme;
+  const publishedAt = await publish(client, {
+    theme,
+    title: title.slice(0, 200),
+    description: (site.config.seo.description || seo.description).slice(0, 400),
+    content: {
+      ...content,
+      customDesign: { title, html },
+    },
+    articleIds: selectedArticles(source, site.config).map((a) => a.id),
+  });
+  return { slug: site.slug, publishedAt };
+}
+
 /** Builds the snapshot from My Identity + the SAVED draft right now, and publishes it. */
 export async function publishWebsite(): Promise<Date> {
   const { client, user, source, profile, introRow } = await loadSource();
@@ -249,23 +297,57 @@ export async function unpublishWebsite(): Promise<void> {
   await cleanupPublishedIntro(client, user.id, undefined);
 }
 
+async function decorateOwnerPreviewContent(
+  client: Awaited<ReturnType<typeof getAuthenticatedDb>>["client"],
+  userId: string,
+  profile: Awaited<ReturnType<typeof loadSource>>["profile"],
+  introRow: Awaited<ReturnType<typeof loadSource>>["introRow"],
+  content: ReturnType<typeof buildPublishedContent>,
+) {
+  if (content.person.intro) {
+    const intro = await previewIntroFor(client, userId, introRow);
+    content.person = { ...content.person, intro };
+    if (!intro) delete content.person.intro;
+  }
+  if (content.person.imageUrl) {
+    const shown = await ownerImageUrl(client, userId, profile.profileImageUrl);
+    content.person = { ...content.person, imageUrl: shown ?? undefined };
+    if (!shown) delete content.person.imageUrl;
+  }
+  return content;
+}
+
+/** Preview current identity with a draft theme/config without persisting (Folio Designer). */
+export async function buildDraftPreview(
+  theme: ThemeId,
+  config: WebsiteConfig,
+) {
+  const { client, user, source, profile, introRow } = await loadSource();
+  const normalized = normalizeConfig(config);
+  let content = buildPublishedContent(source, normalized);
+  content = await decorateOwnerPreviewContent(
+    client,
+    user.id,
+    profile,
+    introRow,
+    content,
+  );
+  return { theme, content };
+}
+
 /** Content for the owner's preview: current My Identity + saved draft (never published by viewing). */
 export async function getPreview() {
   const { client, user, source, profile, introRow } = await loadSource();
   const site = await findSite(client, user.id);
   if (!site) return null;
-  const content = buildPublishedContent(source, site.config);
-  if (content.person.intro) {
-    const intro = await previewIntroFor(client, user.id, introRow);
-    content.person = { ...content.person, intro };
-    if (!intro) delete content.person.intro;
-  }
-  // The public copy only exists after publishing; the owner's preview uses a signed URL.
-  if (content.person.imageUrl) {
-    const shown = await ownerImageUrl(client, user.id, profile.profileImageUrl);
-    content.person = { ...content.person, imageUrl: shown ?? undefined };
-    if (!shown) delete content.person.imageUrl;
-  }
+  let content = buildPublishedContent(source, site.config);
+  content = await decorateOwnerPreviewContent(
+    client,
+    user.id,
+    profile,
+    introRow,
+    content,
+  );
   return { theme: site.theme, content };
 }
 

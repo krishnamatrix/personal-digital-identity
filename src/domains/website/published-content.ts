@@ -245,6 +245,13 @@ export const publishedContentSchema = z.object({
   sections: z.array(publishedSectionSchema).max(13),
   /** Present only when the owner switched the links page on. */
   links: publishedLinksSchema.optional(),
+  /** Optional custom standalone HTML page published from Folio Designer. */
+  customDesign: z
+    .object({
+      title: text(160),
+      html: z.string().min(1).max(250_000),
+    })
+    .optional(),
 });
 
 export type PublishedContent = z.infer<typeof publishedContentSchema>;
