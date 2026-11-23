@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 
 export const LOCAL_AI_BASE_URL = "http://127.0.0.1:31415/v1";
+export const DEFAULT_GEMINI_FALLBACK = "gemini-3.5-flash";
 
 export class AiConfigurationError extends Error {
   constructor() {
@@ -80,12 +81,25 @@ export function getAiConfiguration() {
   if (apiKey && /[\r\n]/.test(apiKey)) throw new AiConfigurationError();
 
   if (provider === "google") {
+    const generate = (m: string) =>
+      `${endpoint}/models/${encodeURIComponent(m)}:generateContent`;
+    // A second model to use when the first is overloaded (Gemini answers 503 "high
+    // demand" for minutes at a time on popular models). "none" turns it off.
+    const fallback = setting("llm_fallback_model") || DEFAULT_GEMINI_FALLBACK;
+    const fallbackModel =
+      fallback === "none" || fallback === resolvedModel
+        ? null
+        : modelSchema.safeParse(fallback).success
+          ? fallback
+          : null;
     return apiKey
       ? {
           provider: "gemini" as const,
           apiKey,
           model: resolvedModel,
-          endpoint: `${endpoint}/models/${encodeURIComponent(resolvedModel)}:generateContent`,
+          endpoint: generate(resolvedModel),
+          fallbackModel,
+          fallbackEndpoint: fallbackModel ? generate(fallbackModel) : null,
         }
       : null;
   }

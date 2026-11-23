@@ -7,7 +7,8 @@ const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 /**
  * Words that may never be a slug: application routes and system paths, plus common
  * future-proofing names. MUST equal the lists in the CHECK constraints of
- * docs/sql/milestone-8/001-digital-cards.sql, which supersede milestone-5 (a test enforces it).
+ * docs/sql/milestone-chatcards/001-chatcard-routes.sql, which supersede milestone-8 and
+ * milestone-5 (a test enforces it).
  */
 export const RESERVED_SLUGS = [
   "about",
@@ -20,6 +21,8 @@ export const RESERVED_SLUGS = [
   "auth",
   "blog",
   "cards",
+  "chat",
+  "chatcards",
   "contact",
   "dashboard",
   "docs",
@@ -35,6 +38,7 @@ export const RESERVED_SLUGS = [
   "legal",
   "login",
   "logout",
+  "messages",
   "new",
   "null",
   "onboarding",

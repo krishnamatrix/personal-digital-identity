@@ -9,6 +9,8 @@ import {
   Globe,
   Home,
   IdCard,
+  MessagesSquare,
+  MessageSquareText,
   Link2,
   Menu,
   PenLine,
@@ -64,6 +66,13 @@ const groups = [
         href: "/profile?section=featured",
         icon: Star,
       },
+    ],
+  },
+  {
+    title: "MY CONNECTIONS",
+    links: [
+      { label: "ChatCards", href: "/chatcards", icon: MessageSquareText },
+      { label: "Messages", href: "/messages", icon: MessagesSquare },
     ],
   },
 ] as const;

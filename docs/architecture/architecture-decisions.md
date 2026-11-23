@@ -153,3 +153,18 @@ starts and ends in the soundtrack.
 needs video tooling. A stored trim is instant, can be changed any time, and costs only the few seconds of extra
 download that visitors never see played.
 **Details.** `m13-video-intro.md` (Trim), `docs/sql/milestone-13/004-intro-trim-and-studio.sql`.
+
+## AD-017: ChatCards keep every rule in Postgres without SECURITY DEFINER
+
+**Decision.** ChatCards (PRO) are owner-private cards with a published snapshot (AD-005) and one-to-one conversations,
+all in schema `folioone` under forced RLS. Cross-user steps (reading a card by its link, redeeming an activation code,
+starting a conversation) run through SECURITY INVOKER functions that set a transaction-local setting
+(`folioone.chat_card`, `folioone.code_hash`); policies reveal a card or a code row only when that setting matches, so
+nothing can be listed or enumerated. Cross-table rules live in BEFORE triggers rather than policies (policies that read
+each other recurse). Activation codes are stored only as SHA-256 hashes; redemption is atomic through unique
+constraints. Messaging is polled, not Realtime. Analytics reuse `insight_events`.
+**Why.** The project forbids SECURITY DEFINER for new features, service-role keys and direct connections (AD-004).
+Transaction-local settings plus invoker functions give "you may see this one row if you know its secret" without
+privileged code, and keep PRO, membership, rate limits and the code rules enforceable even if the app were bypassed.
+Polling avoids new infrastructure.
+**Details.** `chatcards.md`, `docs/sql/milestone-chatcards/`.

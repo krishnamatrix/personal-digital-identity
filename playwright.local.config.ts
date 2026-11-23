@@ -53,6 +53,7 @@ export default defineConfig({
     "onboarding-journey.spec.ts",
     "website-journey.spec.ts",
     "articles-journey.spec.ts",
+    "chatcards-journey.spec.ts",
   ],
   fullyParallel: false,
   workers: 1,

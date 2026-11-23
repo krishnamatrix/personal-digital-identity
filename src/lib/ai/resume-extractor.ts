@@ -6,6 +6,7 @@ import {
 } from "@/domains/identity/resume-import/resume-extraction-schema";
 import type { ResumeDocument } from "@/domains/identity/resume-import/resume-file";
 import { getAiConfiguration } from "./config";
+import { fetchWithFallback } from "./retry";
 import { AiRequestError, extractStructuredDocument } from "./openai-compatible";
 
 /**
@@ -33,12 +34,17 @@ export class ResumeExtractionUnavailableError extends Error {
   }
 }
 
+/** Codes meaning the AI service itself was busy or down (not a problem with the file). */
+const BUSY_CODES = /^(gemini|ai)_(429|500|502|503|504|network)$/;
+
 /** The selected provider could not produce a usable extraction. */
 export class ResumeExtractionFailedError extends Error {
   readonly code?: string;
   constructor(code?: string) {
     super(
-      "We could not read your resume. Please try again, or skip this step.",
+      code && BUSY_CODES.test(code)
+        ? "The AI service that reads resumes is busy right now. Please try again in a minute."
+        : "We could not read your resume. Please try again, or skip this step.",
     );
     this.name = "ResumeExtractionFailedError";
     this.code = code;
@@ -160,23 +166,27 @@ export async function extractResume(
 
   let json: unknown;
   try {
-    const response = await fetch(config.endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM }] },
-        contents: [{ role: "user", parts }],
-        generationConfig: {
-          maxOutputTokens: 16000,
-          responseMimeType: "application/json",
-          responseJsonSchema: RESPONSE_SCHEMA,
-          // Extraction is routine; minimal thinking keeps the onboarding wait short.
-          thinkingConfig: { thinkingLevel: "MINIMAL" },
-        },
+    // Retried on Gemini's temporary 503 / 429 answers, then the fallback model.
+    const response = await fetchWithFallback(
+      [config.endpoint, config.fallbackEndpoint].filter((u) => u !== null),
+      () => ({
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM }] },
+          contents: [{ role: "user", parts }],
+          generationConfig: {
+            maxOutputTokens: 16000,
+            responseMimeType: "application/json",
+            responseJsonSchema: RESPONSE_SCHEMA,
+            // Extraction is routine; minimal thinking keeps the onboarding wait short.
+            thinkingConfig: { thinkingLevel: "MINIMAL" },
+          },
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(120_000),
       }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(120_000),
-    });
+    );
     if (!response.ok) {
       throw new ResumeExtractionFailedError(`gemini_${response.status}`);
     }

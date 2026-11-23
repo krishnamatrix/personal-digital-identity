@@ -50,6 +50,7 @@ beforeEach(() => {
     "endpoint",
     "api_key",
     "model",
+    "fallback_model",
     "response_format",
   ]) {
     vi.stubEnv(`llm_${name}`, "");
@@ -338,14 +339,85 @@ describe("extractResume (Gemini)", () => {
     expect((error as ResumeExtractionFailedError).code).toBe(code);
   });
 
-  it("maps HTTP and network failures to a failed extraction", async () => {
-    fetchMock.mockResolvedValueOnce(geminiReply({ error: {} }, 429));
+  it("retries Gemini's temporary failures, then says the service is busy", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockImplementation(async () => geminiReply({ error: {} }, 503));
+      const busy = expect(
+        extractResume({ kind: "docx", text: "cv" }),
+      ).rejects.toMatchObject({
+        code: "gemini_503",
+        message: expect.stringContaining("busy right now"),
+      });
+      await vi.runAllTimersAsync();
+      await busy;
+      // Two tries on the default model, then three on the fallback.
+      const urls = fetchMock.mock.calls.map(([url]) => String(url));
+      expect(urls).toHaveLength(5);
+      expect(
+        urls.slice(0, 2).every((u) => u.includes("/gemini-3.5-flash-lite:")),
+      ).toBe(true);
+      expect(urls.slice(2).every((u) => u.includes("/gemini-3.5-flash:"))).toBe(
+        true,
+      );
+
+      fetchMock.mockReset();
+      fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+      const offline = expect(
+        extractResume({ kind: "docx", text: "cv" }),
+      ).rejects.toMatchObject({ code: "gemini_network" });
+      await vi.runAllTimersAsync();
+      await offline;
+      expect(fetchMock).toHaveBeenCalledTimes(5);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reads the resume with the fallback model when the default one is overloaded", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockImplementation(async (url: string) =>
+        url.includes("/gemini-3.5-flash-lite:")
+          ? geminiReply({ error: {} }, 503)
+          : geminiReply({
+              candidates: [
+                {
+                  finishReason: "STOP",
+                  content: { parts: [{ text: JSON.stringify(empty) }] },
+                },
+              ],
+            }),
+      );
+      const done = extractResume({ kind: "docx", text: "cv" });
+      await vi.runAllTimersAsync();
+      await expect(done).resolves.toMatchObject({ isResume: true });
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+
+      // Turned off: only the default model is tried.
+      fetchMock.mockClear();
+      vi.stubEnv("llm_fallback_model", "none");
+      const alone = expect(
+        extractResume({ kind: "docx", text: "cv" }),
+      ).rejects.toMatchObject({
+        code: "gemini_503",
+      });
+      await vi.runAllTimersAsync();
+      await alone;
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not retry a request Gemini rejects, and blames the file only then", async () => {
+    fetchMock.mockResolvedValueOnce(geminiReply({ error: {} }, 400));
     await expect(
       extractResume({ kind: "docx", text: "cv" }),
-    ).rejects.toMatchObject({ code: "gemini_429" });
-    fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
-    await expect(
-      extractResume({ kind: "docx", text: "cv" }),
-    ).rejects.toMatchObject({ code: "gemini_network" });
+    ).rejects.toMatchObject({
+      code: "gemini_400",
+      message: expect.stringContaining("could not read your resume"),
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

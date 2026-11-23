@@ -50,6 +50,18 @@ export async function getSiteUrl(): Promise<string> {
 }
 
 /** Only same-site relative paths may be used as a post-auth destination. */
+/**
+ * Where to send someone after signing in or up from a ChatCard: only a ChatCard page or the
+ * conversation inbox, so an emailed link can never redirect anywhere else.
+ */
+export function returnPathAfterAuth(value: unknown): string | null {
+  const v = typeof value === "string" ? value : "";
+  return /^\/chat\/[0-9a-f]{32}$/.test(v) ||
+    /^\/messages(\/[0-9a-f-]{36})?$/.test(v)
+    ? v
+    : null;
+}
+
 export function safeNextPath(
   value: string | null | undefined,
   fallback = "/profile",

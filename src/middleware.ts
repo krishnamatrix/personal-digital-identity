@@ -49,6 +49,9 @@ export const config = {
     "/insights/:path*",
     "/pricing/:path*",
     "/articles/:path*",
+    "/chatcards/:path*",
+    "/messages/:path*",
+    "/chat/:path*",
     "/reset-password",
   ],
 };

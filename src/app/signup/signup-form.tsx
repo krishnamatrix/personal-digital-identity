@@ -8,7 +8,7 @@ import { signupAction, type SignupActionState } from "@/app/signup/actions";
 
 const initial: SignupActionState = { status: "idle", message: "" };
 
-export function SignupForm() {
+export function SignupForm({ next }: { next?: string | null } = {}) {
   const [state, formAction, pending] = useActionState(signupAction, initial);
 
   if (state.status === "check_email") {
@@ -20,7 +20,7 @@ export function SignupForm() {
           your address and start setting up your profile.
         </p>
         <Link
-          href="/login"
+          href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
           className="text-accent text-sm font-medium underline-offset-4 hover:underline"
         >
           Back to sign in
@@ -31,6 +31,7 @@ export function SignupForm() {
 
   return (
     <form action={formAction} className="space-y-5" noValidate>
+      {next && <input type="hidden" name="next" value={next} />}
       <FormField
         id="name"
         label="Full name"
@@ -79,7 +80,7 @@ export function SignupForm() {
       <p className="text-muted-foreground text-center text-sm">
         Already have an account?{" "}
         <Link
-          href="/login"
+          href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
           className="text-accent underline-offset-4 hover:underline"
         >
           Sign in

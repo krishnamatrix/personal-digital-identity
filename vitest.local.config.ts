@@ -20,6 +20,7 @@ export default defineConfig({
       "tests/hosted/persona-anchor-absent.hosted.ts",
       "tests/hosted/persona-anchor-concurrent.hosted.ts",
       "tests/hosted/articles-snapshot.hosted.ts",
+      "tests/hosted/chatcards.hosted.ts",
     ],
     hookTimeout: 60_000,
     testTimeout: 90_000,

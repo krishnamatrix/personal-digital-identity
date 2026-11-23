@@ -50,6 +50,10 @@ const SQL_PACKAGE = [
   "docs/sql/milestone-13/002-intro-videos.sql",
   "docs/sql/milestone-13/003-intro-video-background.sql",
   "docs/sql/milestone-13/004-intro-trim-and-studio.sql",
+  // ChatCards: reserved routes, the ChatCard + conversation tables, and their Insights events.
+  "docs/sql/milestone-chatcards/001-chatcard-routes.sql",
+  "docs/sql/milestone-chatcards/002-chatcards.sql",
+  "docs/sql/milestone-chatcards/003-chatcard-insights.sql",
 ];
 
 /**
@@ -351,23 +355,23 @@ async function main() {
     const sql = `
       WITH f AS (SELECT p.* FROM pg_proc p WHERE p.pronamespace = 'folioone'::regnamespace)
       SELECT
-        (SELECT count(*) FROM f) = 25,
-        (SELECT count(*) FROM f WHERE prosrc LIKE '%PT409%') = 7,
+        (SELECT count(*) FROM f) = 35,
+        (SELECT count(*) FROM f WHERE prosrc LIKE '%PT409%') = 11,
         (SELECT count(*) FROM f WHERE prosrc LIKE '%40001%') = 0,
         (SELECT count(*) FROM f WHERE prosecdef) = 1,
         (SELECT count(*) FROM f WHERE prosecdef AND proname = 'billing_activate_pro') = 1,
         (SELECT count(*) FROM f WHERE prosrc ~* '\\mpublic\\.') = 0,
         (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'folioone'::regnamespace AND c.relkind = 'r'
-           AND c.relname IN ('accounts','identity_profiles','identity_entries','website_sites','website_published','articles','website_published_articles','digital_cards','digital_card_published','account_plans','pro_payments','billing_secrets','insight_events','intro_videos','personas','persona_sections','persona_profile_field_selections','persona_profile_overrides','persona_revisions')
-           AND c.relrowsecurity AND c.relforcerowsecurity) = 19,
-        (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'folioone'::regnamespace AND c.relkind = 'r') = 19,
-        (SELECT count(*) FROM pg_policies WHERE schemaname = 'folioone') = 57,
+           AND c.relname IN ('accounts','identity_profiles','identity_entries','website_sites','website_published','articles','website_published_articles','digital_cards','digital_card_published','account_plans','pro_payments','billing_secrets','insight_events','intro_videos','personas','persona_sections','persona_profile_field_selections','persona_profile_overrides','persona_revisions','chat_cards','chat_card_public','chat_card_code_batches','chat_card_codes','chat_card_redemptions','chat_card_redeem_attempts','conversations','conversation_messages','conversation_blocks','conversation_reports')
+           AND c.relrowsecurity AND c.relforcerowsecurity) = 29,
+        (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'folioone'::regnamespace AND c.relkind = 'r') = 29,
+        (SELECT count(*) FROM pg_policies WHERE schemaname = 'folioone') = 85,
         (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r'
            AND c.relname IN ('accounts','identity_profiles','personas','persona_sections','persona_profile_field_selections','persona_profile_overrides','persona_revisions')) = ${publicDecoy ? 7 : 0};`;
     const { code, out } = await psql(sql, ["-At", "-F", ","]);
     if (code !== 0 || out.trim().split("\n").pop() !== "t,t,t,t,t,t,t,t,t,t") {
       throw new Error(
-        `Unexpected local catalog shape (folioone: 25 functions (11 + 3 website + 1 article trigger + 3 snapshot gate helpers + 3 card + 4 plan), 7 PT409, 0 x 40001, exactly 1 SECURITY DEFINER (billing_activate_pro), no public. references, 19 forced-RLS tables (7 package + identity_entries + 2 website + 2 article + 2 card + 3 plan + insight_events + intro_videos), 57 policies (21 + 4 + 7 + 9 + 7 + 3 + 2 + 4); public app tables = ${publicDecoy ? 7 : 0}): ${out}`,
+        `Unexpected local catalog shape (folioone: 35 functions (11 + 3 website + 1 article trigger + 3 snapshot gate helpers + 3 card + 4 plan + 10 ChatCards), 11 PT409, 0 x 40001, exactly 1 SECURITY DEFINER (billing_activate_pro), no public. references, 29 forced-RLS tables (7 package + identity_entries + 2 website + 2 article + 2 card + 3 plan + insight_events + intro_videos + 10 ChatCards), 85 policies (21 + 4 + 7 + 9 + 7 + 3 + 2 + 4 + 26 ChatCards + 2 ChatCard insights); public app tables = ${publicDecoy ? 7 : 0}): ${out}`,
       );
     }
   });
@@ -375,7 +379,7 @@ async function main() {
   await step(
     "create dedicated local test users (Auth sign-up, anon key only)",
     async () => {
-      for (const label of ["a", "b", "c", "d", "dev"]) {
+      for (const label of ["a", "b", "c", "d", "e", "f", "g", "dev"]) {
         const email = `local-${label}@folioone.test`;
         const password = `Aa1!${randomBytes(12).toString("hex")}`;
         const response = await fetch(
@@ -511,6 +515,24 @@ async function main() {
       ),
   );
 
+  await step(
+    "DB integration: ChatCards (PRO gate, codes, atomic redemption, conversations, RLS)",
+    () =>
+      vitestLocal(
+        ["tests/hosted/chatcards.hosted.ts"],
+        dbEnv({
+          FOLIOONE_CHAT_OWNER_EMAIL: users.e.email,
+          FOLIOONE_CHAT_OWNER_PASSWORD: users.e.password,
+          FOLIOONE_CHAT_READER_EMAIL: users.f.email,
+          FOLIOONE_CHAT_READER_PASSWORD: users.f.password,
+          FOLIOONE_CHAT_OTHER_EMAIL: users.g.email,
+          FOLIOONE_CHAT_OTHER_PASSWORD: users.g.password,
+          // Lets the suite grant / end PRO on the LOCAL database (see tests/helpers/local-psql.ts).
+          FOLIOONE_LOCAL_DB_CONTAINER: dbContainer,
+        }),
+      ),
+  );
+
   const appEnv = () => ({
     ...baseEnv(),
     ...localEnv,
@@ -565,6 +587,7 @@ async function main() {
             FOLIOONE_DEV_TEST_PASSWORD: users.dev.password,
             E2E_USER_B_EMAIL: users.b.email,
             E2E_USER_B_PASSWORD: users.b.password,
+            FOLIOONE_LOCAL_DB_CONTAINER: dbContainer,
           },
         },
       ),
