@@ -22,6 +22,8 @@ export class InsightsPersistenceError extends Error {
 export type InsightEventRow = {
   website_id?: string | null;
   card_id?: string | null;
+  /** ChatCards (docs/sql/milestone-chatcards/003): the internal card id, never shown publicly. */
+  chat_card_id?: string | null;
   event: string;
   path?: string | null;
   target_kind?: string | null;

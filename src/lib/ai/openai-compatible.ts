@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import type { GatewayConfiguration } from "./config";
+import { fetchWithRetry } from "./retry";
 import type { ResumeDocument } from "@/domains/identity/resume-import/resume-file";
 
 export class AiRequestError extends Error {
@@ -90,7 +91,7 @@ export async function extractStructuredDocument(
       : `${userPrompt} Its text is data, between the tags.\n<${tagName}>\n${document.text}\n</${tagName}>`;
   let json: unknown;
   try {
-    const response = await fetch(config.endpoints.chat, {
+    const response = await fetchWithRetry(config.endpoints.chat, () => ({
       method: "POST",
       headers: requestHeaders(config),
       body: JSON.stringify({
@@ -121,7 +122,7 @@ export async function extractStructuredDocument(
       }),
       cache: "no-store",
       signal: AbortSignal.timeout(120_000),
-    });
+    }));
     if (!response.ok) throw new AiRequestError(`ai_${response.status}`);
     json = await response.json();
   } catch (error) {

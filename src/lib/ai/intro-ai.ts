@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { getAiConfiguration } from "./config";
+import { fetchWithFallback } from "./retry";
 import { toGeminiSchema } from "./resume-extractor";
 import {
   MAX_SCRIPT_CHARS,
@@ -73,25 +74,28 @@ async function generateJson<T>(
   if (!config) throw new IntroAiError("unavailable");
   let json: unknown;
   try {
-    const response = await fetch(config.endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": config.apiKey,
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: "user", parts }],
-        generationConfig: {
-          maxOutputTokens: options.maxOutputTokens,
-          responseMimeType: "application/json",
-          responseJsonSchema: toGeminiSchema(z.toJSONSchema(schema)),
-          thinkingConfig: { thinkingLevel: "MINIMAL" },
+    const response = await fetchWithFallback(
+      [config.endpoint, config.fallbackEndpoint].filter((u) => u !== null),
+      () => ({
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": config.apiKey,
         },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: [{ role: "user", parts }],
+          generationConfig: {
+            maxOutputTokens: options.maxOutputTokens,
+            responseMimeType: "application/json",
+            responseJsonSchema: toGeminiSchema(z.toJSONSchema(schema)),
+            thinkingConfig: { thinkingLevel: "MINIMAL" },
+          },
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(options.timeoutMs),
       }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(options.timeoutMs),
-    });
+    );
     if (!response.ok) throw new IntroAiError(`gemini_${response.status}`);
     json = await response.json();
   } catch (error) {

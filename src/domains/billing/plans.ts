@@ -107,6 +107,7 @@ export const PRO_FEATURES = [
   "Everything in Free",
   `All ${THEME_IDS.length} website designs`,
   `All ${CARD_DESIGN_IDS.length} digital card designs`,
+  "ChatCards: private conversation invitations, with activation codes",
   "Every new design as it is added",
   "Supports an independent product",
 ] as const;

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { returnPathAfterAuth } from "@/lib/site-url";
 
 export type LoginActionState = { error: string | null };
 export type LogoutActionState = { error: string | null };
@@ -38,6 +39,9 @@ export async function loginAction(
     return { error: "We could not sign you in with those credentials." };
   }
 
+  // Someone who came from a ChatCard goes straight back to it.
+  const back = returnPathAfterAuth(formData.get("next"));
+  if (back) redirect(back);
   // Onboarding sends anyone who has already finished it straight on to /profile.
   redirect("/onboarding");
 }

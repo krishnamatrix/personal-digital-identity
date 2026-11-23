@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getSiteUrl } from "@/lib/site-url";
+import { getSiteUrl, returnPathAfterAuth } from "@/lib/site-url";
 
 export type SignupActionState = {
   status: "idle" | "error" | "check_email";
@@ -50,6 +50,8 @@ export async function signupAction(
   }
 
   const { name, email, password } = parsed.data;
+  // From a ChatCard: confirm, then land back on that card (onboarding can wait).
+  const back = returnPathAfterAuth(formData.get("next"));
   let signedIn = false;
   try {
     const supabase = await createClient();
@@ -59,7 +61,8 @@ export async function signupAction(
       password,
       options: {
         data: { full_name: name },
-        emailRedirectTo: `${site}/auth/callback?next=/onboarding`,
+        // `back` is one of a few fixed path shapes (no characters that need encoding).
+        emailRedirectTo: `${site}/auth/callback?next=${back ?? "/onboarding"}`,
       },
     });
     if (error) {
@@ -80,7 +83,7 @@ export async function signupAction(
   }
 
   // With email confirmation off (local development) a session exists immediately.
-  if (signedIn) redirect("/onboarding");
+  if (signedIn) redirect(back ?? "/onboarding");
   // Same response whether or not the address was already registered (no account enumeration).
   return {
     status: "check_email",

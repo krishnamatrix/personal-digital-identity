@@ -135,9 +135,10 @@ describe("slugs", () => {
   });
 
   it("matches the reserved list in the SQL CHECK constraints and every top-level route", () => {
-    // M8 redefines the website slug checks (adding cards/social) and uses the same list for cards.
+    // The ChatCards SQL redefines all four slug checks (adding chat/chatcards/messages); it
+    // supersedes M8 (which added cards/social) and M5.
     const sql = readFileSync(
-      "docs/sql/milestone-8/001-digital-cards.sql",
+      "docs/sql/milestone-chatcards/001-chatcard-routes.sql",
       "utf8",
     );
     const arrays = [...sql.matchAll(/ARRAY\[([^\]]+)\]/g)].map((m) =>
@@ -158,6 +159,9 @@ describe("slugs", () => {
       "social",
       "api",
       "auth",
+      "chat",
+      "chatcards",
+      "messages",
     ])
       expect(RESERVED_SLUGS).toContain(route);
   });

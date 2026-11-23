@@ -1,5 +1,6 @@
 import { AuthCard } from "@/components/auth/auth-card";
 import { LoginForm } from "@/app/login/login-form";
+import { returnPathAfterAuth } from "@/lib/site-url";
 
 const NOTICES: Record<string, { tone: "ok" | "error"; text: string }> = {
   password_updated: {
@@ -15,9 +16,9 @@ const NOTICES: Record<string, { tone: "ok" | "error"; text: string }> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ message?: string; error?: string }>;
+  searchParams: Promise<{ message?: string; error?: string; next?: string }>;
 }) {
-  const { message, error } = await searchParams;
+  const { message, error, next } = await searchParams;
   const notice = NOTICES[message ?? error ?? ""];
   return (
     <AuthCard
@@ -33,7 +34,7 @@ export default async function LoginPage({
           {notice.text}
         </p>
       )}
-      <LoginForm />
+      <LoginForm next={returnPathAfterAuth(next)} />
     </AuthCard>
   );
 }

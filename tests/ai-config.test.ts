@@ -12,9 +12,14 @@ beforeEach(() => {
     "GEMINI_API_KEY",
     "OPENAI_API_KEY",
     "OPENAI_MODEL",
-    ...["provider", "endpoint", "model", "api_key", "response_format"].flatMap(
-      (name) => [`llm_${name}`, `LLM_${name.toUpperCase()}`],
-    ),
+    ...[
+      "provider",
+      "endpoint",
+      "model",
+      "fallback_model",
+      "api_key",
+      "response_format",
+    ].flatMap((name) => [`llm_${name}`, `LLM_${name.toUpperCase()}`]),
   ])
     vi.stubEnv(key, "");
 });
@@ -108,7 +113,23 @@ describe("unified LLM provider settings", () => {
       apiKey: "test-google-key",
       endpoint:
         "https://generativelanguage.googleapis.com/v1beta/models/test-google-model:generateContent",
+      fallbackModel: "gemini-3.5-flash",
+      fallbackEndpoint:
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent",
     });
+  });
+  it("lets the Gemini fallback model be changed or turned off", () => {
+    vi.stubEnv("llm_provider", "google");
+    vi.stubEnv("llm_api_key", "test-google-key");
+    vi.stubEnv("llm_fallback_model", "other-model");
+    expect(getAiConfiguration()).toMatchObject({
+      fallbackModel: "other-model",
+    });
+    vi.stubEnv("llm_fallback_model", "none");
+    expect(getAiConfiguration()).toMatchObject({ fallbackEndpoint: null });
+    vi.stubEnv("llm_fallback_model", "");
+    vi.stubEnv("llm_model", "gemini-3.5-flash");
+    expect(getAiConfiguration()).toMatchObject({ fallbackModel: null });
   });
   it("configures OpenAI with its base URL, explicit model and own key", () => {
     vi.stubEnv("llm_provider", "openai");

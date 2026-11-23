@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { loginAction } from "@/app/login/actions";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string | null } = {}) {
   const [state, formAction, pending] = useActionState(loginAction, {
     error: null,
   });
 
   return (
     <form action={formAction} className="space-y-5">
+      {next && <input type="hidden" name="next" value={next} />}
       <div className="space-y-2">
         <label className="text-sm font-medium" htmlFor="email">
           Email
@@ -61,7 +62,7 @@ export function LoginForm() {
       <p className="text-muted-foreground text-center text-sm">
         New to Folioone?{" "}
         <Link
-          href="/signup"
+          href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"}
           className="text-accent underline-offset-4 hover:underline"
         >
           Create an account

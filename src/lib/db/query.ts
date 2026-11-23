@@ -15,6 +15,7 @@ import "server-only";
  *   queries/intro-videos.ts  video intro row + its private / published Storage files (M13)
  *   queries/media.ts      Supabase Storage: private profile photo + its published public copies
  *   queries/personas.ts   Persona repository (PostgREST + RPC) used when PERSONA_STORAGE=supabase
+ *   queries/chatcards.ts  ChatCards: cards, snapshot, activation codes, conversations, messages
  *
  * Rules (checked by `pnpm check:db-boundary`): no `.from()` / `.rpc()` outside src/lib/db,
  * no wildcard column selection, no Supabase client construction outside the approved modules,
@@ -31,3 +32,4 @@ export * from "@/lib/db/queries/media";
 export * from "@/lib/db/queries/insights";
 export * from "@/lib/db/queries/intro-videos";
 export * from "@/lib/db/queries/personas";
+export * from "@/lib/db/queries/chatcards";

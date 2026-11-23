@@ -32,6 +32,8 @@ describe("WorkspaceShell navigation", () => {
       ["Personas", "/personas"],
       ["Social & Web Profiles", "/profile?section=social"],
       ["Featured Posts", "/profile?section=featured"],
+      ["ChatCards", "/chatcards"],
+      ["Messages", "/messages"],
     ]);
     expect(links.every((l) => l.getAttribute("href") !== "#")).toBe(true);
   });
