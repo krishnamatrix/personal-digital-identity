@@ -6,6 +6,8 @@ export type Viewer = {
   headline: string | null;
   /** PRO plan active right now (shown as a superscript next to the name). */
   isPro: boolean;
+  /** A platform admin (Folio Designer, M14): sees the PLATFORM navigation group. */
+  isAdmin?: boolean;
 };
 
 const clean = (v: unknown) =>

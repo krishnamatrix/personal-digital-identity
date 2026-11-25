@@ -19,6 +19,7 @@ import {
   type SlugCheck,
 } from "@/domains/website/website-service";
 import { ProRequiredError } from "@/domains/billing/plans";
+import { DesignUnavailableError } from "@/domains/designs/design-errors";
 import { SLUG_MESSAGES } from "@/domains/website/slug";
 
 export type WebsiteActionResult = {
@@ -38,6 +39,8 @@ function failure(error: unknown): WebsiteActionResult {
       message:
         "This design is part of Folioone PRO. Upgrade, or choose one of the free designs.",
     };
+  if (error instanceof DesignUnavailableError)
+    return { ok: false, message: error.message };
   if (error instanceof AuthenticationRequiredError)
     return {
       ok: false,

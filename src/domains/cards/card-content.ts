@@ -5,7 +5,8 @@ import {
   type CardConfig,
   type CardField,
 } from "./card-config";
-import { cardDesign } from "./card-designs";
+import { cardDesign, type CardDesign } from "./card-designs";
+import { pinnedCardDesignSchema } from "@/domains/designs/design-spec";
 
 /**
  * The PUBLISHED card: the only thing /social/<slug> reads. Built from My Identity + the card
@@ -45,6 +46,8 @@ export const cardContentSchema = z.object({
       }),
     )
     .max(CARD_LINK_KINDS.length),
+  /** A Folio Designer design (M14) pinned at publish time; absent for the code designs. */
+  design: pinnedCardDesignSchema.optional(),
 });
 
 export type CardContent = z.infer<typeof cardContentSchema>;
@@ -135,9 +138,11 @@ const LINK_LABEL: Record<Exclude<CardLinkKind, "custom">, string> = {
 export function buildCardContent(
   source: CardSource,
   config: CardConfig,
+  /** The resolved design (a Folio Designer design is not in the code list). */
+  design: CardDesign = cardDesign(config.design),
 ): CardContent {
   // The photo is published only when the chosen design actually shows it (photo emboss).
-  const showsPhoto = cardDesign(config.design).emboss === "photo";
+  const showsPhoto = design.emboss === "photo";
   return composeCardContent(
     {
       values: fieldValues(source),

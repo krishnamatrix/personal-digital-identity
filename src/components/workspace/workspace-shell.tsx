@@ -7,7 +7,11 @@ export async function WorkspaceShell({ children }: { children: ReactNode }) {
   const viewer = await getViewer();
   return (
     <WorkspaceFrame
-      viewer={viewer ? { name: viewer.name, isPro: viewer.isPro } : undefined}
+      viewer={
+        viewer
+          ? { name: viewer.name, isPro: viewer.isPro, isAdmin: viewer.isAdmin }
+          : undefined
+      }
     >
       {children}
     </WorkspaceFrame>

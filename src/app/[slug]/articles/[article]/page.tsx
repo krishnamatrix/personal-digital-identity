@@ -6,7 +6,7 @@ import { getSiteUrl } from "@/lib/site-url";
 import { getPublicSite } from "@/domains/website/website-service";
 import { getPublicArticle } from "@/domains/articles/article-service";
 import { deriveExcerpt } from "@/domains/articles/rich-text";
-import { themeColors, type ThemeId } from "@/domains/website/config";
+import { siteColors, type ThemeId } from "@/domains/website/config";
 import { publicIdFor } from "@/domains/insights/insights-service";
 import { PageTracker } from "@/components/insights/page-tracker";
 
@@ -92,8 +92,8 @@ export default async function PublicArticlePage({
         SHELL[site.theme]
           ? undefined
           : {
-              background: themeColors(site.theme).bg,
-              color: themeColors(site.theme).fg,
+              background: siteColors(site.theme, site.content).bg,
+              color: siteColors(site.theme, site.content).fg,
             }
       }
       data-theme={site.theme}

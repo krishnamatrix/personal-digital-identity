@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { CARD_DESIGN_IDS, type CardDesignId } from "./card-designs";
+import type { CardDesignId } from "./card-designs";
+import { designIdSchema } from "@/domains/designs/design-spec";
 
 /**
  * Digital card configuration: pure rules shared by the workspace UI, the server and tests.
@@ -77,7 +78,8 @@ const httpsUrl = z
 
 export const cardConfigSchema = z.object({
   type: z.enum(CARD_TYPE_IDS),
-  design: z.enum(CARD_DESIGN_IDS),
+  /** A code design or a Folio Designer design; the service checks that it is available. */
+  design: designIdSchema,
   displayName: z.string().trim().max(CARD_NAME_MAX),
   initials: z
     .string()
@@ -136,10 +138,9 @@ export function normalizeCardConfig(input: unknown): CardConfig {
   };
 }
 
+/** A well-formed design id (code or Folio Designer). Availability is checked by the service. */
 export function isCardDesignId(v: unknown): v is CardDesignId {
-  return (
-    typeof v === "string" && (CARD_DESIGN_IDS as readonly string[]).includes(v)
-  );
+  return designIdSchema.safeParse(v).success;
 }
 
 export type CardStatus = "not_created" | "draft" | "published" | "unpublished";

@@ -30,13 +30,20 @@ import {
   buildCardContent,
   cardName,
   cardProblems,
+  composeCardContent,
   fieldValues,
   type CardContent,
   type CardProblem,
   type CardSource,
 } from "./card-content";
 import { hasActivePro } from "@/domains/billing/billing-service";
-import { isProCardDesign, ProRequiredError } from "@/domains/billing/plans";
+import { ProRequiredError } from "@/domains/billing/plans";
+import {
+  listCardDesigns,
+  resolveCardDesign,
+  type ResolvedCardDesign,
+} from "@/domains/designs/design-catalog";
+import { DesignUnavailableError } from "@/domains/designs/design-errors";
 import { stableStringify } from "@/domains/website/build-published";
 import {
   normalizeSlug,
@@ -106,11 +113,27 @@ async function loadSource() {
   };
 }
 
+/** Card content for a resolved design; a Folio Designer design is pinned into the snapshot. */
+function contentFor(
+  source: CardSource,
+  config: CardConfig,
+  design: ResolvedCardDesign | null,
+): CardContent {
+  const content = buildCardContent(source, config, design?.design);
+  return design?.source === "designer"
+    ? { ...content, design: design.pin }
+    : content;
+}
+
 export async function getCardState(): Promise<CardState> {
   const { client, user, source, rawImageUrl } = await loadSource();
   const card = await findCard(client, user.id);
   const config = card?.config ?? defaultCardConfig();
-  const content = buildCardContent(source, config);
+  const content = contentFor(
+    source,
+    config,
+    await resolveCardDesign(client, config.design),
+  );
   const live =
     card?.status === "published"
       ? await findOwnPublishedCard(client, user.id)
@@ -134,6 +157,28 @@ export async function getCardState(): Promise<CardState> {
   };
 }
 
+/** The signed-in person's own card content, for previewing a design in the Folio Designer. */
+export async function getOwnCardContentForDesignPreview(): Promise<CardContent> {
+  const state = await getCardState();
+  const content = composeCardContent(
+    {
+      values: state.values,
+      profileName: state.profileName,
+      photoUrl: state.photoUrl,
+    },
+    state.config,
+  );
+  return content.name
+    ? content
+    : { ...content, name: "Your Name", initials: "YN" };
+}
+
+/** Designs for the card picker: the code designs and published Folio Designer designs. */
+export async function getCardDesignOptions(keep?: string) {
+  const { client } = await getAuthenticatedDb();
+  return listCardDesigns(client, keep);
+}
+
 async function ensureCard(): Promise<{
   client: Awaited<ReturnType<typeof getAuthenticatedDb>>["client"];
   userId: string;
@@ -153,13 +198,15 @@ async function ensureCard(): Promise<{
 export async function saveMyCardDraft(input: unknown): Promise<void> {
   const config = normalizeCardConfig(cardConfigSchema.parse(input));
   const { client, userId, card } = await ensureCard();
-  // Switching TO a PRO design needs PRO; keeping one chosen earlier does not (same rule as SQL).
-  if (
-    config.design !== card.config.design &&
-    isProCardDesign(config.design) &&
-    !(await hasActivePro(client, userId))
-  )
-    throw new ProRequiredError();
+  // Switching design: it must be available now, and a PRO design needs PRO. Keeping the saved
+  // one (even if since retired, or PRO lapsed) is allowed (same rule as SQL).
+  if (config.design !== card.config.design) {
+    const design = await resolveCardDesign(client, config.design);
+    if (!design || design.status !== "published")
+      throw new DesignUnavailableError();
+    if (design.pro && !(await hasActivePro(client, userId)))
+      throw new ProRequiredError();
+  }
   await saveCardDraft(client, userId, config);
 }
 
@@ -209,13 +256,12 @@ export async function publishMyCard(): Promise<Date> {
   const { client, user, source, rawImageUrl } = await loadSource();
   const card = await findCard(client, user.id);
   if (!card?.slug) throw new CardPublishBlockedError([]);
-  const content = buildCardContent(source, card.config);
+  const design = await resolveCardDesign(client, card.config.design);
+  if (!design) throw new DesignUnavailableError();
+  const content = contentFor(source, card.config, design);
   const problems = cardProblems(content);
   if (problems.length) throw new CardPublishBlockedError(problems);
-  if (
-    isProCardDesign(card.config.design) &&
-    !(await hasActivePro(client, user.id))
-  )
+  if (design.pro && !(await hasActivePro(client, user.id)))
     throw new ProRequiredError();
   if (content.photoUrl)
     await preparePublishedImage(client, user.id, rawImageUrl, "card");

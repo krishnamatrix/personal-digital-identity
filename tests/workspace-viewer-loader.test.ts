@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   session: vi.fn(),
   plan: vi.fn(),
+  admin: vi.fn(),
   log: vi.fn(),
   signal: new Error("framework control flow"),
 }));
@@ -11,6 +12,7 @@ vi.mock("@/lib/db/query", async () => ({
   ...(await vi.importActual("@/lib/db/queries/billing")),
   getAuthenticatedDb: mocks.session,
   findPlan: mocks.plan,
+  isPlatformAdmin: mocks.admin,
 }));
 vi.mock("@/lib/server-log", () => ({ logLoadError: mocks.log }));
 vi.mock("next/navigation", () => ({
@@ -46,6 +48,7 @@ function queryReturning(data: unknown = null, error: unknown = null) {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.plan.mockResolvedValue(null);
+  mocks.admin.mockResolvedValue(false);
 });
 
 describe("workspace viewer loading", () => {
@@ -59,6 +62,7 @@ describe("workspace viewer loading", () => {
       name: "Priya Saved",
       headline: "Builder",
       isPro: false,
+      isAdmin: false,
     });
     expect(mocks.log).not.toHaveBeenCalled();
   });
@@ -75,6 +79,7 @@ describe("workspace viewer loading", () => {
       name: "Priya Legacy",
       headline: "Builder",
       isPro: false,
+      isAdmin: false,
     });
     expect(query.eq.mock.calls).toEqual([
       ["account_id", ownerId],
@@ -121,6 +126,7 @@ describe("workspace viewer loading", () => {
     await expect(getViewer()).resolves.toMatchObject({
       name: "Priya",
       isPro: false,
+      isAdmin: false,
     });
     expect(mocks.log).toHaveBeenCalledExactlyOnceWith(
       "workspace-viewer:plan",
@@ -143,6 +149,7 @@ describe("workspace viewer loading", () => {
     await expect(getViewer()).resolves.toMatchObject({
       name: "Priya",
       isPro: true,
+      isAdmin: false,
     });
   });
 
@@ -158,6 +165,7 @@ describe("workspace viewer loading", () => {
       await expect(getViewer()).resolves.toMatchObject({
         name: "Priya",
         isPro: false,
+        isAdmin: false,
       });
       expect(mocks.plan).toHaveBeenCalledTimes(1);
       expect(mocks.log).not.toHaveBeenCalled();
@@ -224,5 +232,17 @@ describe("workspace viewer loading", () => {
     await expect(getViewer()).rejects.toBe(mocks.signal);
     expect(mocks.log).not.toHaveBeenCalled();
     expect(mocks.plan).not.toHaveBeenCalled();
+  });
+});
+
+describe("workspace viewer: platform admin flag", () => {
+  it("marks a platform admin, and never fails the chrome if the lookup fails", async () => {
+    queryReturning({ display_name: "Ada", headline: null });
+    mocks.admin.mockResolvedValueOnce(true);
+    await expect(getViewer()).resolves.toMatchObject({ isAdmin: true });
+    const error = new Error("down");
+    mocks.admin.mockRejectedValueOnce(error);
+    await expect(getViewer()).resolves.toMatchObject({ isAdmin: false });
+    expect(mocks.log).toHaveBeenCalledWith("workspace-viewer:admin", error);
   });
 });

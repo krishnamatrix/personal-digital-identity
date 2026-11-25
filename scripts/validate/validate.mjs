@@ -54,6 +54,8 @@ const SQL_PACKAGE = [
   "docs/sql/milestone-chatcards/001-chatcard-routes.sql",
   "docs/sql/milestone-chatcards/002-chatcards.sql",
   "docs/sql/milestone-chatcards/003-chatcard-insights.sql",
+  // M14 Folio Designer: platform admins + design templates/versions; designs move into the DB.
+  "docs/sql/milestone-14/001-design-templates.sql",
 ];
 
 /**
@@ -355,23 +357,23 @@ async function main() {
     const sql = `
       WITH f AS (SELECT p.* FROM pg_proc p WHERE p.pronamespace = 'folioone'::regnamespace)
       SELECT
-        (SELECT count(*) FROM f) = 35,
-        (SELECT count(*) FROM f WHERE prosrc LIKE '%PT409%') = 11,
+        (SELECT count(*) FROM f) = 38,
+        (SELECT count(*) FROM f WHERE prosrc LIKE '%PT409%') = 13,
         (SELECT count(*) FROM f WHERE prosrc LIKE '%40001%') = 0,
         (SELECT count(*) FROM f WHERE prosecdef) = 1,
         (SELECT count(*) FROM f WHERE prosecdef AND proname = 'billing_activate_pro') = 1,
         (SELECT count(*) FROM f WHERE prosrc ~* '\\mpublic\\.') = 0,
         (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'folioone'::regnamespace AND c.relkind = 'r'
-           AND c.relname IN ('accounts','identity_profiles','identity_entries','website_sites','website_published','articles','website_published_articles','digital_cards','digital_card_published','account_plans','pro_payments','billing_secrets','insight_events','intro_videos','personas','persona_sections','persona_profile_field_selections','persona_profile_overrides','persona_revisions','chat_cards','chat_card_public','chat_card_code_batches','chat_card_codes','chat_card_redemptions','chat_card_redeem_attempts','conversations','conversation_messages','conversation_blocks','conversation_reports')
-           AND c.relrowsecurity AND c.relforcerowsecurity) = 29,
-        (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'folioone'::regnamespace AND c.relkind = 'r') = 29,
-        (SELECT count(*) FROM pg_policies WHERE schemaname = 'folioone') = 85,
+           AND c.relname IN ('accounts','identity_profiles','identity_entries','website_sites','website_published','articles','website_published_articles','digital_cards','digital_card_published','account_plans','pro_payments','billing_secrets','insight_events','intro_videos','personas','persona_sections','persona_profile_field_selections','persona_profile_overrides','persona_revisions','chat_cards','chat_card_public','chat_card_code_batches','chat_card_codes','chat_card_redemptions','chat_card_redeem_attempts','conversations','conversation_messages','conversation_blocks','conversation_reports','platform_admins','design_templates','design_template_versions')
+           AND c.relrowsecurity AND c.relforcerowsecurity) = 32,
+        (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'folioone'::regnamespace AND c.relkind = 'r') = 32,
+        (SELECT count(*) FROM pg_policies WHERE schemaname = 'folioone') = 92,
         (SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r'
            AND c.relname IN ('accounts','identity_profiles','personas','persona_sections','persona_profile_field_selections','persona_profile_overrides','persona_revisions')) = ${publicDecoy ? 7 : 0};`;
     const { code, out } = await psql(sql, ["-At", "-F", ","]);
     if (code !== 0 || out.trim().split("\n").pop() !== "t,t,t,t,t,t,t,t,t,t") {
       throw new Error(
-        `Unexpected local catalog shape (folioone: 35 functions (11 + 3 website + 1 article trigger + 3 snapshot gate helpers + 3 card + 4 plan + 10 ChatCards), 11 PT409, 0 x 40001, exactly 1 SECURITY DEFINER (billing_activate_pro), no public. references, 29 forced-RLS tables (7 package + identity_entries + 2 website + 2 article + 2 card + 3 plan + insight_events + intro_videos + 10 ChatCards), 85 policies (21 + 4 + 7 + 9 + 7 + 3 + 2 + 4 + 26 ChatCards + 2 ChatCard insights); public app tables = ${publicDecoy ? 7 : 0}): ${out}`,
+        `Unexpected local catalog shape (folioone: 38 functions (11 + 3 website + 1 article trigger + 3 snapshot gate helpers + 3 card + 4 plan + 10 ChatCards + 3 Folio Designer), 13 PT409, 0 x 40001, exactly 1 SECURITY DEFINER (billing_activate_pro), no public. references, 32 forced-RLS tables (7 package + identity_entries + 2 website + 2 article + 2 card + 3 plan + insight_events + intro_videos + 10 ChatCards + 3 Folio Designer), 92 policies (21 + 4 + 7 + 9 + 7 + 3 + 2 + 4 + 26 ChatCards + 2 ChatCard insights + 7 Folio Designer); public app tables = ${publicDecoy ? 7 : 0}): ${out}`,
       );
     }
   });
@@ -379,7 +381,18 @@ async function main() {
   await step(
     "create dedicated local test users (Auth sign-up, anon key only)",
     async () => {
-      for (const label of ["a", "b", "c", "d", "e", "f", "g", "dev"]) {
+      for (const label of [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i",
+        "dev",
+      ]) {
         const email = `local-${label}@folioone.test`;
         const password = `Aa1!${randomBytes(12).toString("hex")}`;
         const response = await fetch(
@@ -528,6 +541,22 @@ async function main() {
           FOLIOONE_CHAT_OTHER_EMAIL: users.g.email,
           FOLIOONE_CHAT_OTHER_PASSWORD: users.g.password,
           // Lets the suite grant / end PRO on the LOCAL database (see tests/helpers/local-psql.ts).
+          FOLIOONE_LOCAL_DB_CONTAINER: dbContainer,
+        }),
+      ),
+  );
+
+  await step(
+    "DB integration: Folio Designer (admin-only writes, versions, design gate, pinned specs)",
+    () =>
+      vitestLocal(
+        ["tests/hosted/designs.hosted.ts"],
+        dbEnv({
+          FOLIOONE_DESIGN_ADMIN_EMAIL: users.h.email,
+          FOLIOONE_DESIGN_ADMIN_PASSWORD: users.h.password,
+          FOLIOONE_DESIGN_USER_EMAIL: users.i.email,
+          FOLIOONE_DESIGN_USER_PASSWORD: users.i.password,
+          // Grants the admin role / PRO on the LOCAL database (see tests/helpers/local-psql.ts).
           FOLIOONE_LOCAL_DB_CONTAINER: dbContainer,
         }),
       ),

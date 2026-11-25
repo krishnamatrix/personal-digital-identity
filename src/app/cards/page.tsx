@@ -4,7 +4,10 @@ import { logLoadError } from "@/lib/server-log";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { AuthenticationRequiredError } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/site-url";
-import { getCardState } from "@/domains/cards/card-service";
+import {
+  getCardDesignOptions,
+  getCardState,
+} from "@/domains/cards/card-service";
 import { getViewer } from "@/domains/identity/viewer";
 import { CardsWorkspace } from "@/app/cards/cards-workspace";
 
@@ -16,12 +19,14 @@ export default async function CardsPage() {
     const state = await getCardState();
     const origin = await getSiteUrl();
     const viewer = await getViewer();
+    const designs = await getCardDesignOptions(state.config.design);
     return (
       <WorkspaceShell>
         <CardsWorkspace
           initial={state}
           origin={origin}
           isPro={viewer?.isPro ?? false}
+          designs={designs}
         />
       </WorkspaceShell>
     );

@@ -2,6 +2,8 @@ import "server-only";
 import { z } from "zod";
 
 export const LOCAL_AI_BASE_URL = "http://127.0.0.1:31415/v1";
+/** FreeLLMAPI's OpenAI-compatible base; used only when the provider is `freellmapi`. */
+export const FREELLMAPI_BASE_URL = "http://127.0.0.1:31415/v1";
 export const DEFAULT_GEMINI_FALLBACK = "gemini-3.5-flash";
 
 export class AiConfigurationError extends Error {
@@ -40,26 +42,31 @@ function baseUrl(value: string): string {
 
 /** Read lazily on the server; never import from client components. */
 export function getAiConfiguration() {
-  const selected =
-    setting("llm_provider") || process.env.AI_PROVIDER?.trim() || "google";
+  const selected = (
+    setting("llm_provider") ||
+    process.env.AI_PROVIDER?.trim() ||
+    "google"
+  ).toLowerCase();
   const provider =
     selected === "gemini"
       ? "google"
       : selected === "openai-compatible"
         ? "local"
         : selected;
-  if (!["google", "openai", "local"].includes(provider))
+  if (!["google", "openai", "local", "freellmapi"].includes(provider))
     throw new AiConfigurationError();
 
   // Legacy gateway settings are only reused for the local/gateway provider. A
   // provider switch must not send the old gateway's endpoint or key to a cloud API.
   const model =
     setting("llm_model") ||
-    (provider === "local"
-      ? process.env.AI_MODEL?.trim() || "auto"
-      : provider === "google"
-        ? "gemini-3.5-flash-lite"
-        : process.env.OPENAI_MODEL?.trim());
+    (provider === "freellmapi"
+      ? "auto"
+      : provider === "local"
+        ? process.env.AI_MODEL?.trim() || "auto"
+        : provider === "google"
+          ? "gemini-3.5-flash-lite"
+          : process.env.OPENAI_MODEL?.trim());
   if (!modelSchema.safeParse(model).success) throw new AiConfigurationError();
   const resolvedModel = model as string;
   const endpoint = baseUrl(
@@ -68,7 +75,9 @@ export function getAiConfiguration() {
         ? "https://generativelanguage.googleapis.com/v1beta"
         : provider === "openai"
           ? "https://api.openai.com/v1"
-          : process.env.AI_BASE_URL?.trim() || LOCAL_AI_BASE_URL),
+          : provider === "freellmapi"
+            ? FREELLMAPI_BASE_URL
+            : process.env.AI_BASE_URL?.trim() || LOCAL_AI_BASE_URL),
   );
   const apiKey =
     setting("llm_api_key") ||
@@ -76,7 +85,9 @@ export function getAiConfiguration() {
       ? process.env.GEMINI_API_KEY?.trim()
       : provider === "openai"
         ? process.env.OPENAI_API_KEY?.trim()
-        : process.env.AI_API_KEY?.trim()) ||
+        : provider === "freellmapi"
+          ? process.env.FREELLMAPI_API_KEY?.trim()
+          : process.env.AI_API_KEY?.trim()) ||
     undefined;
   if (apiKey && /[\r\n]/.test(apiKey)) throw new AiConfigurationError();
 
@@ -112,7 +123,7 @@ export function getAiConfiguration() {
   if (!format.success) throw new AiConfigurationError();
   return {
     provider: "openai-compatible" as const,
-    providerName: provider as "openai" | "local",
+    providerName: provider as "openai" | "local" | "freellmapi",
     baseUrl: endpoint,
     model: resolvedModel,
     apiKey,

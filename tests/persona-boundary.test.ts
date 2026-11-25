@@ -171,7 +171,8 @@ describe("Persona persistence and Master Identity boundaries", () => {
     expect(runtime).toMatch(/env\.PERSONA_STORAGE === "supabase"/);
     expect(runtime).toMatch(/new InMemoryPersonaRepository\(/);
     expect(read(join(root, RUNTIME))).toMatch(/IN-MEMORY FIXTURE ADAPTER/);
-    expect(runtime).toMatch(/\bfindProfile\b/);
+    // 072b4e9 switched the runtime to findCanonicalProfile (same profile read through src/lib/db).
+    expect(runtime).toMatch(/\bfind(Canonical)?Profile\b/);
   });
 
   it("never takes an account id from client input", () => {

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { publishedIntroSchema } from "@/domains/intro/intro-video";
+import { pinnedWebsiteDesignSchema } from "@/domains/designs/design-spec";
 
 /**
  * The PUBLISHED representation. This is the only thing the public site reads. It is built by
@@ -245,6 +246,12 @@ export const publishedContentSchema = z.object({
   sections: z.array(publishedSectionSchema).max(13),
   /** Present only when the owner switched the links page on. */
   links: publishedLinksSchema.optional(),
+  /**
+   * A Folio Designer design (M14), pinned at publish time: its version and an exact copy of its
+   * spec, so later edits to the design never change a live site until the owner republishes.
+   * Absent for the code designs.
+   */
+  design: pinnedWebsiteDesignSchema.optional(),
 });
 
 export type PublishedContent = z.infer<typeof publishedContentSchema>;

@@ -6,8 +6,15 @@ import { templateRootStyle } from "@/components/website/template-site";
  * A miniature of a theme for the picker: the template's real palette and display face,
  * arranged like its layout. Decorative (aria-hidden); the card's text names the theme.
  */
-export function ThemeThumb({ id }: { id: ThemeId }) {
-  const spec = templateSpec(id);
+export function ThemeThumb({
+  id,
+  spec: given,
+}: {
+  id: ThemeId;
+  /** A Folio Designer design's spec (code designs are looked up by id). */
+  spec?: TemplateSpec;
+}) {
+  const spec = given ?? templateSpec(id);
   if (!spec) return <BuiltInThumb id={id} />;
   const root = templateRootStyle(spec);
   return (

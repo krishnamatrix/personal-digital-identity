@@ -15,7 +15,10 @@ import {
   SECTION_IDS,
   type SectionId,
 } from "@/domains/website/config";
-import { getWebsiteState } from "@/domains/website/website-service";
+import {
+  getWebsiteDesignOptions,
+  getWebsiteState,
+} from "@/domains/website/website-service";
 import { suggestSlug } from "@/domains/website/slug";
 import {
   WebsiteWorkspace,
@@ -42,6 +45,7 @@ export default async function WebsitePage() {
     const config = site?.config ?? defaultConfig();
     const origin = await getSiteUrl();
     const viewer = await getViewer();
+    const designs = await getWebsiteDesignOptions(site?.theme);
 
     const choices: Partial<Record<SectionId, EntryChoice[]>> = {};
     const hasContent = {} as Record<SectionId, boolean>;
@@ -70,6 +74,7 @@ export default async function WebsitePage() {
         <WebsiteWorkspace
           origin={origin}
           isPro={viewer?.isPro ?? false}
+          designs={designs}
           initial={{
             status: state.status,
             slug: site?.slug ?? null,

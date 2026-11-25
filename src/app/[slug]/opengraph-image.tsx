@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getPublicSite } from "@/domains/website/website-service";
-import { themeColors } from "@/domains/website/config";
+import { siteColors } from "@/domains/website/config";
 
 export const alt = "Personal website";
 export const size = { width: 1200, height: 630 };
@@ -23,7 +23,7 @@ export default async function Image({
   } catch {
     site = null;
   }
-  const c = themeColors(site?.theme ?? "professional");
+  const c = siteColors(site?.theme ?? "professional", site?.content);
   const person = site?.content.person;
   return new ImageResponse(
     (

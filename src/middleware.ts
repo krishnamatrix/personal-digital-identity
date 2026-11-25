@@ -52,6 +52,7 @@ export const config = {
     "/chatcards/:path*",
     "/messages/:path*",
     "/chat/:path*",
+    "/admin/:path*",
     "/reset-password",
   ],
 };

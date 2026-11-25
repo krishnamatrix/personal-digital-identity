@@ -38,8 +38,10 @@ import {
   THEME_IDS,
   THEMES,
   isThemeId,
+  siteColors,
   themeColors,
 } from "@/domains/website/config";
+import { websiteSpecFrom } from "@/domains/designs/design-spec";
 import { TEMPLATES } from "@/domains/website/templates";
 import type { PublishedContent } from "@/domains/website/published-content";
 
@@ -149,6 +151,33 @@ describe("template rendering", () => {
     },
   );
 
+  it("renders a pinned Folio Designer design from the snapshot, whatever the theme id", () => {
+    const spec = {
+      ...websiteSpecFrom(TEMPLATES[0]),
+      layout: "sidebar" as const,
+      palette: { ...TEMPLATES[0].palette, bg: "#123456", accent: "#abcdef" },
+    };
+    const { container } = render(
+      <SiteView
+        theme="harbour-1a2b3c"
+        content={{
+          ...content,
+          design: { id: "harbour-1a2b3c", version: 2, spec },
+        }}
+      />,
+    );
+    const root = container.querySelector(
+      '[data-theme="harbour-1a2b3c"]',
+    ) as HTMLElement;
+    expect(root).not.toBeNull();
+    expect(root.style.getPropertyValue("--t-bg")).toBe("#123456");
+    expect(root.style.getPropertyValue("--t-accent")).toBe("#abcdef");
+    expect(siteColors("harbour-1a2b3c", { design: { spec } }).bg).toBe(
+      "#123456",
+    );
+    expect(siteColors("noir").bg).toBe(themeColors("noir").bg);
+  });
+
   it("keeps the built-in themes on their hand-built layouts", () => {
     const { container } = render(
       <SiteView theme="professional" content={content} />,
@@ -156,6 +185,16 @@ describe("template rendering", () => {
     expect(
       container.querySelector('[data-theme="professional"]'),
     ).not.toBeNull();
+  });
+
+  it("draws a thumbnail from a designer spec passed in", () => {
+    const spec = { ...TEMPLATES[1], id: "x-1" };
+    const { container } = render(<ThemeThumb id="x-1" spec={spec} />);
+    expect(
+      (container.firstElementChild as HTMLElement).style.getPropertyValue(
+        "--t-bg",
+      ),
+    ).toBe(TEMPLATES[1].palette.bg);
   });
 
   it("draws a decorative thumbnail for every theme", () => {

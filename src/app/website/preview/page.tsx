@@ -4,7 +4,6 @@ import Link from "next/link";
 import { SiteView } from "@/components/website/site-view";
 import { AuthenticationRequiredError } from "@/lib/supabase/server";
 import { getPreview } from "@/domains/website/website-service";
-import { isThemeId } from "@/domains/website/config";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -22,7 +21,9 @@ export default async function WebsitePreviewPage({
   const requested = (await searchParams).theme;
   let preview;
   try {
-    preview = await getPreview();
+    preview = await getPreview(
+      typeof requested === "string" ? requested : undefined,
+    );
   } catch (error) {
     if (!(error instanceof AuthenticationRequiredError))
       logLoadError("/website/preview", error);
@@ -53,10 +54,7 @@ export default async function WebsitePreviewPage({
         Preview. Only you can see this. Nothing here is public until you
         publish.
       </div>
-      <SiteView
-        theme={isThemeId(requested) ? requested : preview.theme}
-        content={preview.content}
-      />
+      <SiteView theme={preview.theme} content={preview.content} />
     </>
   );
 }

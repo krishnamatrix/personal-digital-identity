@@ -46,3 +46,18 @@ export function setLocalPro(email: string, until: string | null) {
       FROM auth.users WHERE email = ${quote(email)}
     ON CONFLICT (account_id) DO UPDATE SET plan = EXCLUDED.plan, pro_until = EXCLUDED.pro_until;`);
 }
+
+/** Makes a local test account a platform admin (Folio Designer), or removes the role. */
+export function setLocalAdmin(email: string, admin: boolean) {
+  localPsql(`
+    INSERT INTO folioone.accounts (id) SELECT id FROM auth.users WHERE email = ${quote(email)}
+      ON CONFLICT DO NOTHING;
+    ${
+      admin
+        ? `INSERT INTO folioone.platform_admins (account_id, note)
+             SELECT id, 'local test' FROM auth.users WHERE email = ${quote(email)}
+           ON CONFLICT (account_id) DO NOTHING;`
+        : `DELETE FROM folioone.platform_admins
+             WHERE account_id = (SELECT id FROM auth.users WHERE email = ${quote(email)});`
+    }`);
+}

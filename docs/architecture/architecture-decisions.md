@@ -168,3 +168,21 @@ Transaction-local settings plus invoker functions give "you may see this one row
 privileged code, and keep PRO, membership, rate limits and the code rules enforceable even if the app were bypassed.
 Polling avoids new infrastructure.
 **Details.** `chatcards.md`, `docs/sql/milestone-chatcards/`.
+
+## AD-018: Folio Designer designs are validated data in Postgres, pinned into snapshots
+
+**Decision.** Website and card designs live in `design_templates` with immutable, numbered
+`design_template_versions`. A design is a JSON spec drawn by the app's existing renderers; AI
+(any configured provider) fills that fixed schema through structured output and never writes
+code. Only platform admins (a table the developer edits in the SQL Editor) can write designs.
+Publishing a site or card copies the design's current spec into the snapshot (`content.design`),
+and the M9 trigger now checks every chosen design against the table (exists, not a draft,
+published when newly chosen, PRO tier, exact pinned spec). The 55 code designs are seeded as
+read-only rows.
+**Why.** Specs are small, need validation, versions, row-level rules and atomic publishing, all
+of which the database already does; object storage would only add a second source of truth.
+Data instead of code means AI output cannot run script on public pages that share the app's
+origin, and nothing needs review beyond "does it look good and is it readable". Pinning keeps a
+designer's later edits from changing anyone's live page. Checking the pin in the trigger stops a
+hand-crafted spec (a free "custom design") through the API.
+**Details.** `m14-folio-designer.md`, `docs/sql/milestone-14/`.

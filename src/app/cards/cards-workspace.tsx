@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProLockBadge, ProPlansLink } from "@/components/billing/pro-lock";
 import { isProCardDesign } from "@/domains/billing/plans";
+import type { CardDesignOption } from "@/domains/designs/design-spec";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { ArrowLeft, ArrowRight, Check, Copy, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -80,11 +81,20 @@ const FIELD_SOURCE: Record<Exclude<CardField, "custom">, string> = {
   website: "/profile?section=social",
 };
 
+const DEFAULT_DESIGNS: CardDesignOption[] = CARD_DESIGNS.map((d) => ({
+  ...d,
+  pro: isProCardDesign(d.id),
+  source: "builtin",
+}));
+
 export function CardsWorkspace({
   initial,
   origin,
   isPro = false,
+  designs: options = DEFAULT_DESIGNS,
 }: {
+  /** Code designs + published Folio Designer designs (server-provided). */
+  designs?: CardDesignOption[];
   initial: CardState;
   origin: string;
   /** PRO plan active: every design is open. */
@@ -123,7 +133,8 @@ export function CardsWorkspace({
   const shown = content.name
     ? content
     : { ...content, name: "Your Name", initials: "YN" };
-  const design = cardDesign(config.design);
+  const design =
+    options.find((d) => d.id === config.design) ?? cardDesign(config.design);
   const cardUrl = slug ? `${origin}/social/${slug}` : null;
   const problems = cardProblems(content);
 
@@ -163,14 +174,15 @@ export function CardsWorkspace({
   }
 
   const designs = useMemo(() => {
+    const open = options.filter((d) => !d.retired || d.id === saved.design);
     if (category !== "Suggested")
-      return CARD_DESIGNS.filter((d) => d.category === category);
+      return open.filter((d) => d.category === category);
     const lead = TYPE_CATEGORY[config.type];
     return [
-      ...CARD_DESIGNS.filter((d) => d.category === lead),
-      ...CARD_DESIGNS.filter((d) => d.category !== lead),
+      ...open.filter((d) => d.category === lead),
+      ...open.filter((d) => d.category !== lead),
     ];
-  }, [category, config.type]);
+  }, [category, config.type, options, saved.design]);
 
   return (
     <div className="space-y-8">
@@ -427,7 +439,7 @@ export function CardsWorkspace({
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="text-base font-semibold">Choose a design</h2>
                 <p className="text-muted-foreground text-xs">
-                  {CARD_DESIGNS.length} designs
+                  {options.filter((d) => !d.retired).length} designs
                 </p>
               </div>
               <div
@@ -451,8 +463,7 @@ export function CardsWorkspace({
                 {designs.map((d) => {
                   const active = config.design === d.id;
                   // A PRO design stays usable if it is already the saved one.
-                  const locked =
-                    !isPro && isProCardDesign(d.id) && saved.design !== d.id;
+                  const locked = !isPro && d.pro && saved.design !== d.id;
                   return (
                     <li key={d.id}>
                       <button

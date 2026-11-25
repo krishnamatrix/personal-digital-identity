@@ -37,6 +37,24 @@ describe("WorkspaceShell navigation", () => {
     expect(links.every((l) => l.getAttribute("href") !== "#")).toBe(true);
   });
 
+  it("shows the Folio Designer only to platform admins", () => {
+    path.value = "/admin/designs/website/x";
+    const { unmount } = render(<WorkspaceFrame>content</WorkspaceFrame>);
+    expect(screen.queryByRole("link", { name: /Folio Designer/ })).toBeNull();
+    unmount();
+    render(
+      <WorkspaceFrame viewer={{ name: "Ada Admin", isAdmin: true }}>
+        content
+      </WorkspaceFrame>,
+    );
+    const nav = screen.getByRole("navigation", {
+      name: "Workspace navigation",
+    });
+    const link = within(nav).getByRole("link", { name: /Folio Designer/ });
+    expect(link).toHaveAttribute("href", "/admin/designs");
+    expect(within(nav).getByText("PLATFORM")).toBeInTheDocument();
+  });
+
   it("keeps out-of-scope destinations out of the active navigation", () => {
     render(<WorkspaceFrame>content</WorkspaceFrame>);
     const nav = screen.getByRole("navigation", {

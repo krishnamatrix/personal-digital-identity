@@ -54,6 +54,7 @@ export default defineConfig({
     "website-journey.spec.ts",
     "articles-journey.spec.ts",
     "chatcards-journey.spec.ts",
+    "folio-designer-journey.spec.ts",
   ],
   fullyParallel: false,
   workers: 1,

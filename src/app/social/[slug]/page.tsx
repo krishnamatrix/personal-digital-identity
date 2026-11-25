@@ -5,6 +5,7 @@ import { UserPlus } from "lucide-react";
 import { BusinessCard } from "@/components/cards/business-card";
 import { CardWithQr } from "@/components/cards/card-with-qr";
 import { cardDesign } from "@/domains/cards/card-designs";
+import { toCardDesign } from "@/domains/designs/design-spec";
 import { cardVCard } from "@/domains/cards/card-content";
 import { getPublicCard } from "@/domains/cards/card-service";
 import { getSiteUrl } from "@/lib/site-url";
@@ -51,7 +52,13 @@ export default async function PublicCardPage({
   const { slug } = await params;
   const card = await load(slug);
   if (!card) notFound();
-  const design = cardDesign(card.design);
+  // A Folio Designer design is pinned in the snapshot; code designs are looked up by id.
+  const design = card.content.design
+    ? toCardDesign(
+        { id: card.content.design.id, label: "", category: "" },
+        card.content.design.spec,
+      )
+    : cardDesign(card.design);
   const { content } = card;
   const url = `${await getSiteUrl()}/social/${card.slug}`;
   const vcard = cardVCard(content, url);

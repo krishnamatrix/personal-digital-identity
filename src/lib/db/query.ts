@@ -16,6 +16,7 @@ import "server-only";
  *   queries/media.ts      Supabase Storage: private profile photo + its published public copies
  *   queries/personas.ts   Persona repository (PostgREST + RPC) used when PERSONA_STORAGE=supabase
  *   queries/chatcards.ts  ChatCards: cards, snapshot, activation codes, conversations, messages
+ *   queries/designs.ts    Folio Designer: platform admins, design templates and their versions
  *
  * Rules (checked by `pnpm check:db-boundary`): no `.from()` / `.rpc()` outside src/lib/db,
  * no wildcard column selection, no Supabase client construction outside the approved modules,
@@ -33,3 +34,4 @@ export * from "@/lib/db/queries/insights";
 export * from "@/lib/db/queries/intro-videos";
 export * from "@/lib/db/queries/personas";
 export * from "@/lib/db/queries/chatcards";
+export * from "@/lib/db/queries/designs";

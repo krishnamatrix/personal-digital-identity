@@ -406,11 +406,18 @@ export const CARD_DESIGNS = [
   ),
 ] as const satisfies readonly CardDesign[];
 
-export type CardDesignId = (typeof CARD_DESIGNS)[number]["id"];
+/** A code design id (the 32 built into the app). */
+export type BuiltInCardDesignId = (typeof CARD_DESIGNS)[number]["id"];
+/** Any card design id: a code design or a Folio Designer design (M14) from the database. */
+export type CardDesignId = string;
 export const CARD_DESIGN_IDS = CARD_DESIGNS.map((x) => x.id) as [
-  CardDesignId,
-  ...CardDesignId[],
+  BuiltInCardDesignId,
+  ...BuiltInCardDesignId[],
 ];
+
+export function isBuiltInCardDesign(id: string): id is BuiltInCardDesignId {
+  return CARD_DESIGNS.some((x) => x.id === id);
+}
 export const CARD_CATEGORIES: CardCategory[] = [
   "Professional",
   "Personal",

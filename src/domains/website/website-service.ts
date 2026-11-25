@@ -3,14 +3,21 @@ import { getAuthenticatedDb, getAnonymousDb } from "@/lib/db/query";
 import { createEmptyProfile, ensureAccount, findProfile } from "@/lib/db/query";
 import { listEntries, listPublishedArticles } from "@/lib/db/query";
 import { hasActivePro } from "@/domains/billing/billing-service";
-import { isProWebsiteTheme, ProRequiredError } from "@/domains/billing/plans";
+import { ProRequiredError } from "@/domains/billing/plans";
+import {
+  listWebsiteDesigns,
+  resolveWebsiteDesign,
+  type ResolvedWebsiteDesign,
+} from "@/domains/designs/design-catalog";
+import { DesignUnavailableError } from "@/domains/designs/design-errors";
+import { designIdSchema } from "@/domains/designs/design-spec";
+import type { PublishedContent } from "@/domains/website/published-content";
 import { displayExcerpt } from "@/domains/articles/article-schema";
 import type { EntryItem, EntryKind } from "@/domains/identity/entry-kinds";
 import {
   defaultConfig,
   normalizeConfig,
   websiteConfigSchema,
-  THEME_IDS,
   type ThemeId,
   type WebsiteStatus,
 } from "@/domains/website/config";
@@ -116,13 +123,26 @@ async function loadSource() {
   };
 }
 
+/** A Folio Designer design is pinned into the snapshot (id, version and an exact spec copy). */
+function withDesign(
+  content: PublishedContent,
+  design: ResolvedWebsiteDesign | null,
+): PublishedContent {
+  return design?.source === "designer"
+    ? { ...content, design: design.pin }
+    : content;
+}
+
 export async function getWebsiteState(): Promise<
   WebsiteState & { profileName: string | null }
 > {
   const { client, user, source, profile } = await loadSource();
   const site = await findSite(client, user.id);
   const config = site?.config ?? defaultConfig();
-  const content = buildPublishedContent(source, config);
+  const content = withDesign(
+    buildPublishedContent(source, config),
+    site ? await resolveWebsiteDesign(client, site.theme) : null,
+  );
   const snapshot = site ? await findOwnSnapshot(client, user.id) : null;
   const hasUnpublishedChanges =
     site?.status === "published" && snapshot
@@ -182,20 +202,30 @@ export async function saveSlug(input: string): Promise<SiteRow> {
 }
 
 const draftSchema = z.object({
-  theme: z.enum(THEME_IDS),
+  theme: designIdSchema,
   config: websiteConfigSchema,
 });
 
 export async function saveWebsiteDraft(input: unknown): Promise<void> {
   const { theme, config } = draftSchema.parse(input);
   const { client, user } = await getAuthenticatedDb();
-  if (isProWebsiteTheme(theme)) {
-    // Switching TO a PRO design needs PRO; keeping one chosen earlier does not (same rule as SQL).
-    const site = await findSite(client, user.id);
-    if (site?.theme !== theme && !(await hasActivePro(client, user.id)))
+  const site = await findSite(client, user.id);
+  if (site?.theme !== theme) {
+    // Switching design: it must be available now, and a PRO design needs PRO. Keeping the
+    // saved one (even if it has since been retired, or PRO lapsed) is allowed (same rule as SQL).
+    const design = await resolveWebsiteDesign(client, theme);
+    if (!design || design.status !== "published")
+      throw new DesignUnavailableError();
+    if (design.pro && !(await hasActivePro(client, user.id)))
       throw new ProRequiredError();
   }
   await saveDraft(client, user.id, theme as ThemeId, normalizeConfig(config));
+}
+
+/** Designs for the Design tab: the code designs and published Folio Designer designs. */
+export async function getWebsiteDesignOptions(keep?: string) {
+  const { client } = await getAuthenticatedDb();
+  return listWebsiteDesigns(client, keep);
 }
 
 export class PublishBlockedError extends Error {
@@ -210,10 +240,15 @@ export async function publishWebsite(): Promise<Date> {
   const { client, user, source, profile, introRow } = await loadSource();
   const site = await findSite(client, user.id);
   if (!site) throw new PublishBlockedError([]);
-  const content = buildPublishedContent(source, site.config);
+  const design = await resolveWebsiteDesign(client, site.theme);
+  if (!design) throw new DesignUnavailableError();
+  const content = withDesign(
+    buildPublishedContent(source, site.config),
+    design,
+  );
   const problems = publishProblems(content);
   if (problems.length) throw new PublishBlockedError(problems);
-  if (isProWebsiteTheme(site.theme) && !(await hasActivePro(client, user.id)))
+  if (design.pro && !(await hasActivePro(client, user.id)))
     throw new ProRequiredError();
   if (content.person.imageUrl)
     await preparePublishedImage(
@@ -249,12 +284,31 @@ export async function unpublishWebsite(): Promise<void> {
   await cleanupPublishedIntro(client, user.id, undefined);
 }
 
-/** Content for the owner's preview: current My Identity + saved draft (never published by viewing). */
-export async function getPreview() {
+/**
+ * Content for the owner's preview: current My Identity + saved draft (never published by
+ * viewing). `theme` previews another available design without saving it.
+ */
+export async function getPreview(theme?: string) {
   const { client, user, source, profile, introRow } = await loadSource();
   const site = await findSite(client, user.id);
   if (!site) return null;
-  const content = buildPublishedContent(source, site.config);
+  let shownTheme = site.theme;
+  let design = await resolveWebsiteDesign(client, site.theme);
+  if (
+    theme &&
+    theme !== site.theme &&
+    designIdSchema.safeParse(theme).success
+  ) {
+    const other = await resolveWebsiteDesign(client, theme);
+    if (other?.status === "published") {
+      shownTheme = theme;
+      design = other;
+    }
+  }
+  const content = withDesign(
+    buildPublishedContent(source, site.config),
+    design,
+  );
   if (content.person.intro) {
     const intro = await previewIntroFor(client, user.id, introRow);
     content.person = { ...content.person, intro };
@@ -266,7 +320,27 @@ export async function getPreview() {
     content.person = { ...content.person, imageUrl: shown ?? undefined };
     if (!shown) delete content.person.imageUrl;
   }
-  return { theme: site.theme, content };
+  return { theme: shownTheme, content };
+}
+
+/**
+ * The signed-in person's own content for previewing a design in the Folio Designer: their
+ * saved website settings (or the defaults) over their current My Identity. Never published.
+ */
+export async function getOwnContentForDesignPreview(): Promise<PublishedContent> {
+  const { client, user, source, profile } = await loadSource();
+  const site = await findSite(client, user.id);
+  const content = buildPublishedContent(
+    source,
+    site?.config ?? defaultConfig(),
+  );
+  if (content.person.imageUrl) {
+    const shown = await ownerImageUrl(client, user.id, profile.profileImageUrl);
+    content.person = { ...content.person, imageUrl: shown ?? undefined };
+    if (!shown) delete content.person.imageUrl;
+  }
+  delete content.person.intro;
+  return content;
 }
 
 /** Public read: anonymous client, live rows only. */

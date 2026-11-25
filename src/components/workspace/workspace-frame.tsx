@@ -12,6 +12,7 @@ import {
   MessagesSquare,
   MessageSquareText,
   Link2,
+  Palette,
   Menu,
   PenLine,
   Star,
@@ -77,13 +78,21 @@ const groups = [
   },
 ] as const;
 
+/** Shown only to platform admins (the server decides; every admin page checks again). */
+const adminGroup = {
+  title: "PLATFORM",
+  links: [{ label: "Folio Designer", href: "/admin/designs", icon: Palette }],
+} as const;
+
 function matches(pathname: string, href: string) {
   return href === "/"
     ? pathname === "/"
     : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-const allHrefs: string[] = groups.flatMap((g) => g.links.map((l) => l.href));
+const allHrefs: string[] = [...groups, adminGroup].flatMap((g) =>
+  g.links.map((l) => l.href),
+);
 
 /** The most specific matching link wins (/website/intro is not also "My Website"). */
 function isActive(pathname: string, href: string) {
@@ -95,7 +104,7 @@ function isActive(pathname: string, href: string) {
 }
 
 function currentSection(pathname: string) {
-  for (const group of groups) {
+  for (const group of [...groups, adminGroup]) {
     for (const link of group.links) {
       if (isActive(pathname, link.href)) return link.label;
     }
@@ -159,8 +168,9 @@ export function WorkspaceFrame({
 }: {
   children: ReactNode;
   /** Signed-in person shown in the sidebar and header. */
-  viewer?: { name: string; isPro?: boolean };
+  viewer?: { name: string; isPro?: boolean; isAdmin?: boolean };
 }) {
+  const navGroups = viewer.isAdmin ? [...groups, adminGroup] : groups;
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   // The mobile drawer stays open while the next page loads (so its link can show the busy
@@ -203,7 +213,7 @@ export function WorkspaceFrame({
           aria-label="Workspace navigation"
           className="flex-1 space-y-7 overflow-y-auto py-5 pr-3 pl-3 md:pr-0"
         >
-          {groups.map((group) => (
+          {navGroups.map((group) => (
             <section key={group.title}>
               <h2 className="text-sidebar-muted px-4 pb-2 text-[10.5px] font-medium tracking-[.14em]">
                 {group.title}

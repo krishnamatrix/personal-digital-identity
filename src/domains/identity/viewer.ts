@@ -5,6 +5,7 @@ import {
   getAuthenticatedDb,
   findPlan,
   findViewerProfile,
+  isPlatformAdmin,
   BillingPersistenceError,
 } from "@/lib/db/query";
 import { isProActive } from "@/domains/billing/plans";
@@ -52,9 +53,17 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
       logLoadError("workspace-viewer:plan", error);
     }
   }
+  let isAdmin = false;
+  try {
+    isAdmin = await isPlatformAdmin(client, user.id);
+  } catch (error) {
+    unstable_rethrow(error);
+    logLoadError("workspace-viewer:admin", error);
+  }
   return {
     name: resolveViewerName(profile, user),
     headline: profile?.headline ?? null,
     isPro,
+    isAdmin,
   };
 });

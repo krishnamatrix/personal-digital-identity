@@ -46,8 +46,19 @@ export const THEMES = [
   category: TemplateCategory;
   blurb: string;
 }[];
-export type ThemeId = (typeof BUILT_IN_THEMES)[number]["id"] | TemplateId;
-export const THEME_IDS = THEMES.map((t) => t.id) as [ThemeId, ...ThemeId[]];
+/** A code design id (the 23 built into the app). */
+export type BuiltInThemeId =
+  | (typeof BUILT_IN_THEMES)[number]["id"]
+  | TemplateId;
+/**
+ * Any website design id: a code design or a Folio Designer design (M14), which lives in the
+ * database. Format: lowercase letters, digits and single hyphens (same as the SQL CHECK).
+ */
+export type ThemeId = string;
+export const THEME_IDS = THEMES.map((t) => t.id) as [
+  BuiltInThemeId,
+  ...BuiltInThemeId[],
+];
 export const THEME_CATEGORIES: readonly TemplateCategory[] = [
   "Editorial",
   "Classic",
@@ -78,8 +89,22 @@ export function themeColors(id: ThemeId): {
     : BUILT_IN_COLORS.professional;
 }
 
-export function isThemeId(value: unknown): value is ThemeId {
-  return typeof value === "string" && THEME_IDS.includes(value as ThemeId);
+/** Is this one of the code designs? (Folio Designer designs are resolved from the database.) */
+/** Colours of a published site: its pinned Folio Designer palette, else the theme's. */
+export function siteColors(
+  theme: ThemeId,
+  content?: {
+    design?: { spec: { palette: { bg: string; ink: string; accent: string } } };
+  },
+): { bg: string; fg: string; accent: string } {
+  const p = content?.design?.spec.palette;
+  return p ? { bg: p.bg, fg: p.ink, accent: p.accent } : themeColors(theme);
+}
+
+export function isThemeId(value: unknown): value is BuiltInThemeId {
+  return (
+    typeof value === "string" && THEME_IDS.includes(value as BuiltInThemeId)
+  );
 }
 
 /** Website sections. `intro` is the hero and always comes first; the rest can be reordered. */

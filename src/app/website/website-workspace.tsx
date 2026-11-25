@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProLockBadge, ProPlansLink } from "@/components/billing/pro-lock";
 import { isProWebsiteTheme } from "@/domains/billing/plans";
+import type { WebsiteDesignOption } from "@/domains/designs/design-spec";
 import { ThemeThumb } from "@/components/website/theme-thumb";
 import type { TemplateCategory } from "@/domains/website/templates";
 import {
@@ -97,6 +98,12 @@ const DEVICES = {
   mobile: { label: "Mobile", width: "390px", icon: Smartphone },
 } as const;
 
+const DEFAULT_DESIGNS: WebsiteDesignOption[] = THEMES.map((t) => ({
+  ...t,
+  pro: isProWebsiteTheme(t.id),
+  source: "builtin",
+}));
+
 export function WebsiteWorkspace({
   origin,
   initial,
@@ -106,8 +113,11 @@ export function WebsiteWorkspace({
   has,
   suggestedSlug,
   isPro = false,
+  designs = DEFAULT_DESIGNS,
 }: {
   origin: string;
+  /** Code designs + published Folio Designer designs (server-provided). */
+  designs?: WebsiteDesignOption[];
   /** PRO plan active: every design is open. */
   isPro?: boolean;
   initial: Initial;
@@ -327,7 +337,7 @@ export function WebsiteWorkspace({
                   <div>
                     <dt className="text-muted-foreground">Theme</dt>
                     <dd className="mt-1">
-                      {THEMES.find((t) => t.id === theme)?.label}
+                      {designs.find((t) => t.id === theme)?.label}
                     </dd>
                   </div>
                   <div>
@@ -456,9 +466,10 @@ export function WebsiteWorkspace({
             <div className="space-y-6">
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <p className="text-muted-foreground max-w-xl text-sm leading-6">
-                  {THEMES.length} designs, each showing the same content.
-                  Switching never changes your Master Identity. Use Preview to
-                  see your own content in a design before you save it.
+                  {designs.filter((d) => !d.retired).length} designs, each
+                  showing the same content. Switching never changes your Master
+                  Identity. Use Preview to see your own content in a design
+                  before you save it.
                 </p>
                 <div
                   role="group"
@@ -483,68 +494,71 @@ export function WebsiteWorkspace({
                 role="radiogroup"
                 aria-label="Theme"
               >
-                {THEMES.filter(
-                  (t) => category === "All" || t.category === category,
-                ).map((t) => {
-                  const selected = theme === t.id;
-                  // A PRO design stays usable if it is already the saved one.
-                  const locked =
-                    !isPro && isProWebsiteTheme(t.id) && savedTheme !== t.id;
-                  return (
-                    <li
-                      key={t.id}
-                      className={`bg-card relative flex flex-col rounded-lg border p-3 transition ${selected ? "border-foreground ring-foreground/15 ring-4" : "border-border hover:border-foreground/30"}`}
-                    >
-                      <button
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        aria-label={
-                          locked ? `${t.label} (PRO, see plans)` : undefined
-                        }
-                        onClick={() =>
-                          locked
-                            ? router.push("/pricing?from=website")
-                            : setTheme(t.id)
-                        }
-                        className="flex-1 text-left after:absolute after:inset-0 after:rounded-lg after:content-['']"
+                {designs
+                  .filter(
+                    (t) =>
+                      (category === "All" || t.category === category) &&
+                      (!t.retired || t.id === savedTheme),
+                  )
+                  .map((t) => {
+                    const selected = theme === t.id;
+                    // A PRO design stays usable if it is already the saved one.
+                    const locked = !isPro && t.pro && savedTheme !== t.id;
+                    return (
+                      <li
+                        key={t.id}
+                        className={`bg-card relative flex flex-col rounded-lg border p-3 transition ${selected ? "border-foreground ring-foreground/15 ring-4" : "border-border hover:border-foreground/30"}`}
                       >
-                        {locked && <ProLockBadge />}
-                        <ThemeThumb id={t.id} />
-                        <span className="mt-3 flex items-center justify-between gap-2 px-1">
-                          <span className="font-medium">{t.label}</span>
-                          <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
-                            {t.category}
-                          </span>
-                        </span>
-                        <span className="text-muted-foreground mt-1 block px-1 text-xs leading-5">
-                          {t.blurb}
-                        </span>
-                      </button>
-                      <div className="relative z-10 mt-3 flex items-center justify-between px-1">
-                        <span className="text-xs font-medium">
-                          {selected ? "Selected" : locked ? "PRO" : ""}
-                        </span>
-                        <a
-                          href={`/website/preview?theme=${t.id}`}
-                          target="_blank"
-                          rel="noopener"
-                          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline-offset-4 hover:underline"
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          aria-label={
+                            locked ? `${t.label} (PRO, see plans)` : undefined
+                          }
+                          onClick={() =>
+                            locked
+                              ? router.push("/pricing?from=website")
+                              : setTheme(t.id)
+                          }
+                          className="flex-1 text-left after:absolute after:inset-0 after:rounded-lg after:content-['']"
                         >
-                          <ExternalLink
-                            className="size-3.5"
-                            aria-hidden="true"
-                          />
-                          Preview
-                          <span className="sr-only">
-                            {" "}
-                            {t.label} with your content
+                          {locked && <ProLockBadge />}
+                          <ThemeThumb id={t.id} spec={t.spec} />
+                          <span className="mt-3 flex items-center justify-between gap-2 px-1">
+                            <span className="font-medium">{t.label}</span>
+                            <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
+                              {t.category}
+                            </span>
                           </span>
-                        </a>
-                      </div>
-                    </li>
-                  );
-                })}
+                          <span className="text-muted-foreground mt-1 block px-1 text-xs leading-5">
+                            {t.blurb}
+                          </span>
+                        </button>
+                        <div className="relative z-10 mt-3 flex items-center justify-between px-1">
+                          <span className="text-xs font-medium">
+                            {selected ? "Selected" : locked ? "PRO" : ""}
+                          </span>
+                          <a
+                            href={`/website/preview?theme=${t.id}`}
+                            target="_blank"
+                            rel="noopener"
+                            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline-offset-4 hover:underline"
+                          >
+                            <ExternalLink
+                              className="size-3.5"
+                              aria-hidden="true"
+                            />
+                            Preview
+                            <span className="sr-only">
+                              {" "}
+                              {t.label} with your content
+                            </span>
+                          </a>
+                        </div>
+                      </li>
+                    );
+                  })}
               </ul>
               {publishBar}
             </div>

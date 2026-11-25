@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getSiteUrl } from "@/lib/site-url";
 import { getPublicSite } from "@/domains/website/website-service";
 import { linksLiveOn } from "@/domains/website/build-published";
-import { themeColors } from "@/domains/website/config";
+import { siteColors } from "@/domains/website/config";
 import { publicIdFor } from "@/domains/insights/insights-service";
 import { LinksView } from "@/components/links/links-view";
 import { PageTracker } from "@/components/insights/page-tracker";
@@ -64,7 +64,7 @@ export default async function PublicLinksPage({
         content={site.content}
         items={linksLiveOn(site.content.links!.items, today)}
         siteSlug={site.slug}
-        colors={themeColors(site.theme)}
+        colors={siteColors(site.theme, site.content)}
       />
       {trackId && <PageTracker surface="website" id={trackId} />}
     </>

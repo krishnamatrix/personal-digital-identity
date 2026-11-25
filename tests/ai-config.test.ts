@@ -160,4 +160,39 @@ describe("unified LLM provider settings", () => {
     vi.stubEnv("AI_PROVIDER", "unknown");
     expect(getAiConfiguration()).toMatchObject({ providerName: "local" });
   });
+
+  it("uses FreeLLMAPI on 127.0.0.1:31415 only when the provider is FREELLMAPI", () => {
+    vi.stubEnv("LLM_PROVIDER", "FREELLMAPI");
+    vi.stubEnv("AI_BASE_URL", "http://stale-gateway.test/v1");
+    vi.stubEnv("AI_MODEL", "stale-model");
+    vi.stubEnv("AI_API_KEY", "stale-key");
+    const base = "http://127.0.0.1:31415/v1";
+    expect(getAiConfiguration()).toEqual({
+      provider: "openai-compatible",
+      providerName: "freellmapi",
+      baseUrl: base,
+      model: "auto",
+      apiKey: undefined,
+      responseFormat: "json_schema",
+      endpoints: {
+        chat: `${base}/chat/completions`,
+        responses: `${base}/responses`,
+        messages: `${base}/messages`,
+        embeddings: `${base}/embeddings`,
+      },
+    });
+    vi.stubEnv("FREELLMAPI_API_KEY", "free-key");
+    expect(getAiConfiguration()).toMatchObject({ apiKey: "free-key" });
+  });
+  it("never sends anything to FreeLLMAPI for other providers", () => {
+    vi.stubEnv("FREELLMAPI_API_KEY", "free-key");
+    vi.stubEnv("llm_provider", "google");
+    expect(getAiConfiguration()).toBeNull();
+    vi.stubEnv("GEMINI_API_KEY", "g-key");
+    expect(JSON.stringify(getAiConfiguration())).not.toContain("31415");
+    vi.stubEnv("llm_provider", "openai");
+    vi.stubEnv("OPENAI_API_KEY", "o-key");
+    vi.stubEnv("llm_model", "gpt-test");
+    expect(JSON.stringify(getAiConfiguration())).not.toContain("31415");
+  });
 });

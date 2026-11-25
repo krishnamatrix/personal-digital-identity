@@ -1,5 +1,6 @@
 import type { ThemeId } from "@/domains/website/config";
 import { templateSpec } from "@/domains/website/templates";
+import { toTemplateSpec } from "@/domains/designs/design-spec";
 import { TemplateSite } from "@/components/website/template-site";
 import { WithIntro } from "@/components/website/with-intro";
 import type { PublishedContent } from "@/domains/website/published-content";
@@ -356,6 +357,18 @@ export function SiteView({
   theme: ThemeId;
   content: PublishedContent;
 }) {
+  // A Folio Designer design travels with the snapshot (pinned spec), so it renders exactly as
+  // published even if the design has changed since.
+  if (content.design)
+    return (
+      <TemplateSite
+        spec={toTemplateSpec(
+          { id: content.design.id, label: "", category: "" },
+          content.design.spec,
+        )}
+        content={content}
+      />
+    );
   const spec = templateSpec(theme);
   if (spec) return <TemplateSite spec={spec} content={content} />;
   if (theme === "creative") return <Creative content={content} />;
