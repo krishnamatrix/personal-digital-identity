@@ -1,9 +1,6 @@
-import "server-only";
-import { getAuthenticatedDb, getAnonymousDb } from "@/lib/db/query";
-import { createEmptyProfile, ensureAccount, findProfile } from "@/lib/db/query";
-import { listEntries, listPublishedArticles } from "@/lib/db/query";
+import { displayExcerpt } from "@/domains/articles/article-schema";
 import { hasActivePro } from "@/domains/billing/billing-service";
-import { ProRequiredError } from "@/domains/billing/plans";
+import { isProWebsiteTheme, ProRequiredError } from "@/domains/billing/plans";
 import {
   listWebsiteDesigns,
   resolveWebsiteDesign,
@@ -11,16 +8,20 @@ import {
 } from "@/domains/designs/design-catalog";
 import { DesignUnavailableError } from "@/domains/designs/design-errors";
 import { designIdSchema } from "@/domains/designs/design-spec";
-import type { PublishedContent } from "@/domains/website/published-content";
-import { displayExcerpt } from "@/domains/articles/article-schema";
 import type { EntryItem, EntryKind } from "@/domains/identity/entry-kinds";
 import {
-  defaultConfig,
-  normalizeConfig,
-  websiteConfigSchema,
-  type ThemeId,
-  type WebsiteStatus,
-} from "@/domains/website/config";
+  cleanupPublishedIntro,
+  loadIntroRow,
+  preparePublishedIntro,
+  previewIntroFor,
+  publishedIntroFor,
+} from "@/domains/intro/intro-video-service";
+import {
+  cleanupPublishedImages,
+  ownerImageUrl,
+  preparePublishedImage,
+  publishedImageUrl,
+} from "@/domains/media/profile-image-service";
 import {
   buildPublishedContent,
   defaultSeo,
@@ -31,38 +32,29 @@ import {
   type PublishProblem,
 } from "@/domains/website/build-published";
 import {
-  changeSlug,
-  createSite,
-  findLiveBySlug,
-  findOwnSnapshot,
-  findSite,
-  isSlugLive,
-  publish,
-  saveDraft,
-  unpublish,
-  WebsitePersistenceError,
-  WebsiteSlugTakenError,
-  type SiteRow,
-} from "@/lib/db/query";
+  defaultConfig,
+  normalizeConfig,
+  websiteConfigSchema,
+  type ThemeId,
+  type WebsiteStatus
+} from "@/domains/website/config";
+import type { PublishedContent } from "@/domains/website/published-content";
 import {
   normalizeSlug,
   validateSlug,
   type SlugProblem,
 } from "@/domains/website/slug";
+import {
+  changeSlug, createEmptyProfile, createSite, ensureAccount, findLiveBySlug,
+  findOwnSnapshot, findProfile, findSite, getAnonymousDb, getAuthenticatedDb, isSlugLive, listEntries, listPublishedArticles, publish,
+  saveDraft,
+  unpublish,
+  WebsitePersistenceError,
+  WebsiteSlugTakenError,
+  type SiteRow
+} from "@/lib/db/query";
+import "server-only";
 import { z } from "zod";
-import {
-  cleanupPublishedImages,
-  ownerImageUrl,
-  preparePublishedImage,
-  publishedImageUrl,
-} from "@/domains/media/profile-image-service";
-import {
-  cleanupPublishedIntro,
-  loadIntroRow,
-  preparePublishedIntro,
-  previewIntroFor,
-  publishedIntroFor,
-} from "@/domains/intro/intro-video-service";
 
 export type WebsiteState = {
   status: WebsiteStatus;
@@ -147,7 +139,7 @@ export async function getWebsiteState(): Promise<
   const hasUnpublishedChanges =
     site?.status === "published" && snapshot
       ? stableStringify({ t: site.theme, c: content }) !==
-        stableStringify({ t: snapshot.theme, c: snapshot.content })
+      stableStringify({ t: snapshot.theme, c: snapshot.content })
       : false;
   return {
     status: site ? site.status : "not_created",
@@ -235,6 +227,52 @@ export class PublishBlockedError extends Error {
   }
 }
 
+export class NoWebsiteAddressError extends Error {
+  constructor() {
+    super("Choose your website address on My Website before publishing.");
+    this.name = "NoWebsiteAddressError";
+  }
+}
+
+export async function getOwnerWebsiteSlug(): Promise<string | null> {
+  const { client, user } = await getAuthenticatedDb();
+  await ensureAccount(client, user.id);
+  const site = await findSite(client, user.id);
+  return site?.slug ?? null;
+}
+
+const customDesignPublishSchema = z.object({
+  title: z.string().trim().min(1).max(160),
+  html: z.string().min(1).max(250_000),
+});
+
+/** Publishes a Folio Designer standalone HTML snapshot to the owner's live website address. */
+export async function publishCustomWebsiteDesign(input: {
+  title: string;
+  html: string;
+}): Promise<{ slug: string; publishedAt: Date }> {
+  const { title, html } = customDesignPublishSchema.parse(input);
+  const { client, user, source } = await loadSource();
+  const site = await findSite(client, user.id);
+  if (!site) throw new NoWebsiteAddressError();
+  const content = buildPublishedContent(source, site.config);
+  const seo = defaultSeo(content);
+  const theme =
+    isProWebsiteTheme(site.theme) && !(await hasActivePro(client, user.id))
+      ? ("professional" as ThemeId)
+      : site.theme;
+  const publishedAt = await publish(client, {
+    theme,
+    title: title.slice(0, 200),
+    description: (site.config.seo.description || seo.description).slice(0, 400),
+    content: {
+      ...content,
+    },
+    articleIds: selectedArticles(source, site.config).map((a) => a.id),
+  });
+  return { slug: site.slug, publishedAt };
+}
+
 /** Builds the snapshot from My Identity + the SAVED draft right now, and publishes it. */
 export async function publishWebsite(): Promise<Date> {
   const { client, user, source, profile, introRow } = await loadSource();
@@ -314,7 +352,6 @@ export async function getPreview(theme?: string) {
     content.person = { ...content.person, intro };
     if (!intro) delete content.person.intro;
   }
-  // The public copy only exists after publishing; the owner's preview uses a signed URL.
   if (content.person.imageUrl) {
     const shown = await ownerImageUrl(client, user.id, profile.profileImageUrl);
     content.person = { ...content.person, imageUrl: shown ?? undefined };

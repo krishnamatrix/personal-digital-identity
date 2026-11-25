@@ -69,15 +69,24 @@ export function getAiConfiguration() {
           : process.env.OPENAI_MODEL?.trim());
   if (!modelSchema.safeParse(model).success) throw new AiConfigurationError();
   const resolvedModel = model as string;
+  const fallbackModelRaw =
+    setting("llm_fallback_model") ||
+    (provider === "openrouter"
+      ? process.env.OPENROUTER_FALLBACK_MODEL?.trim()
+      : undefined) ||
+    undefined;
+  if (fallbackModelRaw && !modelSchema.safeParse(fallbackModelRaw).success) {
+    throw new AiConfigurationError();
+  }
   const endpoint = baseUrl(
     setting("llm_endpoint") ||
-      (provider === "google"
-        ? "https://generativelanguage.googleapis.com/v1beta"
-        : provider === "openai"
-          ? "https://api.openai.com/v1"
-          : provider === "freellmapi"
-            ? FREELLMAPI_BASE_URL
-            : process.env.AI_BASE_URL?.trim() || LOCAL_AI_BASE_URL),
+    (provider === "google"
+      ? "https://generativelanguage.googleapis.com/v1beta"
+      : provider === "openai"
+        ? "https://api.openai.com/v1"
+        : provider === "freellmapi"
+          ? FREELLMAPI_BASE_URL
+          : process.env.AI_BASE_URL?.trim() || LOCAL_AI_BASE_URL),
   );
   const apiKey =
     setting("llm_api_key") ||
@@ -105,20 +114,23 @@ export function getAiConfiguration() {
           : null;
     return apiKey
       ? {
-          provider: "gemini" as const,
-          apiKey,
-          model: resolvedModel,
-          endpoint: generate(resolvedModel),
-          fallbackModel,
-          fallbackEndpoint: fallbackModel ? generate(fallbackModel) : null,
-        }
+        provider: "gemini" as const,
+        apiKey,
+        model: resolvedModel,
+        fallbackModel: fallbackModelRaw,
+        //endpoint: `${endpoint}/models/${encodeURIComponent(resolvedModel)}:generateContent`,
+        endpoint: generate(resolvedModel),
+        fallbackModel,
+        fallbackEndpoint: fallbackModel ? generate(fallbackModel) : null,
+      }
       : null;
   }
-  if (provider === "openai" && !apiKey) return null;
+  if ((provider === "openai" || provider === "openrouter") && !apiKey)
+    return null;
   const format = formatSchema.safeParse(
     setting("llm_response_format") ||
-      process.env.AI_RESPONSE_FORMAT?.trim() ||
-      "json_schema",
+    process.env.AI_RESPONSE_FORMAT?.trim() ||
+    "json_schema",
   );
   if (!format.success) throw new AiConfigurationError();
   return {
@@ -126,6 +138,7 @@ export function getAiConfiguration() {
     providerName: provider as "openai" | "local" | "freellmapi",
     baseUrl: endpoint,
     model: resolvedModel,
+    fallbackModel: fallbackModelRaw,
     apiKey,
     responseFormat: format.data,
     endpoints: {

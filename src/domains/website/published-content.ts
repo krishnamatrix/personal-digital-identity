@@ -1,6 +1,6 @@
-import { z } from "zod";
-import { publishedIntroSchema } from "@/domains/intro/intro-video";
 import { pinnedWebsiteDesignSchema } from "@/domains/designs/design-spec";
+import { publishedIntroSchema } from "@/domains/intro/intro-video";
+import { z } from "zod";
 
 /**
  * The PUBLISHED representation. This is the only thing the public site reads. It is built by

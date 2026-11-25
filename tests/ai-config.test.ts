@@ -1,6 +1,6 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AiConfigurationError, getAiConfiguration } from "@/lib/ai/config";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 beforeEach(() => {
   for (const key of [
