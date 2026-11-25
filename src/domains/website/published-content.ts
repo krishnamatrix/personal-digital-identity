@@ -252,6 +252,10 @@ export const publishedContentSchema = z.object({
    * Absent for the code designs.
    */
   design: pinnedWebsiteDesignSchema.optional(),
+  /** A Folio Designer standalone HTML page, rendered in a sandboxed iframe instead of the template. */
+  customDesign: z
+    .object({ title: z.string().max(200), html: z.string().max(250_000) })
+    .optional(),
 });
 
 export type PublishedContent = z.infer<typeof publishedContentSchema>;

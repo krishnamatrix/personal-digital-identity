@@ -267,6 +267,7 @@ export async function publishCustomWebsiteDesign(input: {
     description: (site.config.seo.description || seo.description).slice(0, 400),
     content: {
       ...content,
+      customDesign: { title, html },
     },
     articleIds: selectedArticles(source, site.config).map((a) => a.id),
   });
