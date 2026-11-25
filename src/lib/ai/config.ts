@@ -120,7 +120,6 @@ export function getAiConfiguration() {
         fallbackModel: fallbackModelRaw,
         //endpoint: `${endpoint}/models/${encodeURIComponent(resolvedModel)}:generateContent`,
         endpoint: generate(resolvedModel),
-        fallbackModel,
         fallbackEndpoint: fallbackModel ? generate(fallbackModel) : null,
       }
       : null;
